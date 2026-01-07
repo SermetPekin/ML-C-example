@@ -1,0 +1,33 @@
+#!/bin/bash
+
+# Commit script - stages changes, commits with a message, and pushes
+# Usage: ./commit "Your commit message"
+
+if [ $# -eq 0 ]; then
+    echo "Error: Please provide a commit message"
+    echo "Usage: ./commit \"Your commit message\""
+    exit 1
+fi
+
+COMMIT_MSG="$1"
+
+echo "Staging changes..."
+git add .
+
+echo "Committing with message: '$COMMIT_MSG'"
+git commit -m "$COMMIT_MSG"
+
+if [ $? -ne 0 ]; then
+    echo "Commit failed"
+    exit 1
+fi
+
+echo "Pushing to remote..."
+git push
+
+if [ $? -eq 0 ]; then
+    echo "Successfully committed and pushed!"
+else
+    echo "Push failed (but commit was successful)"
+    exit 1
+fi
