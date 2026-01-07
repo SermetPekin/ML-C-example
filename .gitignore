@@ -17,3 +17,6 @@ pip-wheel-metadata/
 
 optim 
 *.mat
+
+!.github/
+
