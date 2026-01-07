@@ -3,7 +3,7 @@
 
 #include "model.h"
 #include "matrix.h"
-#include "../include/config.h"
+#include "config.h"
 #include "utils/arena.h"
 #include "utils/prng.h"
 

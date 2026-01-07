@@ -7,7 +7,7 @@
 #include "model.h"
 #include "mnist.h"
 #include "config.h"
-#include "../include/utils/arena.h"
+#include "utils/arena.h"
 
 
 int main(void) {

@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
-#include "../include/utils/base.h"
-#include "../include/utils/prng.h"
+#include "utils/base.h"
+#include "utils/prng.h"
 #include "test_utils.h"
 
 int main(void) {

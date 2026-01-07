@@ -2,3 +2,8 @@
 **.exe
 **.pdb
 **.out
+.vscode/
+.DS_Store
+Thumbs.db
+.idea/
+*.log

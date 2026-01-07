@@ -4,7 +4,7 @@
 #include "mnist.h"
 #include "model.h"
 #include "matrix.h"
-#include "../include/config.h"
+#include "config.h"
 #include "utils/arena.h"
 
 void draw_mnist_digit(f32* data) {

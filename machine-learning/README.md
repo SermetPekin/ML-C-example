@@ -84,3 +84,15 @@ make test_prng      # Pseudo-random number generator tests
 - **PRNG** (`test_prng`): Tests for random number generation and value distribution
 
 Each test suite reports pass/fail counts and detailed error information for any failures.
+
+## Development Notes
+
+This is a fork of a machine learning framework originally created by [Magicalbat](https://github.com/Magicalbat). The original implementation provided solid foundational work on neural networks, matrix operations, and memory management in C. This fork reorganizes and improves the project with better testing infrastructure and development tooling.
+
+### Improvements Made
+
+- **Code reorganization**: Restructured from a flat file layout to a proper `include/` and `src/` directory hierarchy, moving each component (matrix, model, MNIST utilities) into its own module for better maintainability.
+
+- **Added comprehensive tests**: Built test suites for matrix operations, arena memory allocator, and PRNG to catch regressions and verify correctness during development.
+
+- **Development infrastructure**: Added GitHub Actions for CI/CD, requirements.txt for Python dependencies, detailed README for environment setup, and file checks (linting, formatting) to maintain code quality.

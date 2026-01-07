@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <string.h>
-#include "../include/utils/base.h"
-#include "../include/utils/arena.h"
-#include "../include/matrix.h"
+#include "utils/base.h"
+#include "utils/arena.h"
+#include "matrix.h"
 #include "test_utils.h"
 
 int main(void) {
