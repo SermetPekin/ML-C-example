@@ -1,3 +1,4 @@
+#define _DEFAULT_SOURCE
 #include "utils/base.h"
 
 #ifdef _WIN32
