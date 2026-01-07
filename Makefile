@@ -1,6 +1,11 @@
 CC := clang
 CFLAGS := -Wall -Wextra -std=c99 -O2 -I./include
-LDFLAGS := -lm
+
+ifeq ($(OS),Windows_NT)
+    LDFLAGS :=
+else
+    LDFLAGS := -lm
+endif
 
 # Directories
 SRC_DIR := src
