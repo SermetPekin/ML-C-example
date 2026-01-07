@@ -1,3 +1,7 @@
+#ifndef _DEFAULT_SOURCE
+#define _DEFAULT_SOURCE
+#endif
+
 #include "utils/arena.h"
 #include <sys/mman.h>
 
@@ -152,12 +156,7 @@ b32 plat_mem_release(void* ptr, u64 size) {
 
 #elif defined(__linux__)
 
-#ifndef _DEFAULT_SOURCE
-#define _DEFAULT_SOURCE
-#endif
-
 #include <unistd.h>
-#include <sys/mman.h>
 
 u32 plat_get_pagesize(void) {
     return (u32)sysconf(_SC_PAGESIZE);
