@@ -1,3 +1,4 @@
+[![Test](https://github.com/SermetPekin/ML-C-example/actions/workflows/test.yml/badge.svg)](https://github.com/SermetPekin/ML-C-example/actions/workflows/test.yml)
 # Machine Learning in C
 
 A machine learning project written in C, featuring neural network implementations and utilities for working with the MNIST dataset.
