@@ -1,12 +1,30 @@
 
 #define _CRT_SECURE_NO_WARNINGS
 
+#include <inttypes.h>
 #include "base.h"
 #include "arena.h"
 #include "prng.h"
 
 #include "arena.c"
 #include "prng.c"
+#include "platform.c"
+
+// Dataset configuration
+#define MNIST_TRAIN_SIZE 60000
+#define MNIST_TEST_SIZE 10000
+#define MNIST_INPUT_SIZE 784
+#define MNIST_PIXEL_WIDTH 28
+#define MNIST_NUM_CLASSES 10
+#define MNIST_LABEL_DIMS 1
+
+// Model architecture
+#define MODEL_HIDDEN_SIZE 16
+
+// Training configuration
+#define DEFAULT_EPOCHS 10
+#define DEFAULT_BATCH_SIZE 50
+#define DEFAULT_LEARNING_RATE 0.01f
 
 typedef struct {
     u32 rows, cols;
@@ -83,6 +101,30 @@ typedef struct model_var {
     struct model_var* inputs[MODEL_VAR_MAX_INPUTS];
 } model_var;
 
+static inline b32 mv_requires_grad(const model_var* mv) {
+    return (mv->flags & MV_FLAG_REQUIRES_GRAD) == MV_FLAG_REQUIRES_GRAD;
+}
+
+static inline b32 mv_is_parameter(const model_var* mv) {
+    return (mv->flags & MV_FLAG_PARAMETER) == MV_FLAG_PARAMETER;
+}
+
+static inline b32 mv_is_input(const model_var* mv) {
+    return (mv->flags & MV_FLAG_INPUT) == MV_FLAG_INPUT;
+}
+
+static inline b32 mv_is_output(const model_var* mv) {
+    return (mv->flags & MV_FLAG_OUTPUT) == MV_FLAG_OUTPUT;
+}
+
+static inline b32 mv_is_desired_output(const model_var* mv) {
+    return (mv->flags & MV_FLAG_DESIRED_OUTPUT) == MV_FLAG_DESIRED_OUTPUT;
+}
+
+static inline b32 mv_is_cost(const model_var* mv) {
+    return (mv->flags & MV_FLAG_COST) == MV_FLAG_COST;
+}
+
 typedef struct {
     model_var** vars;
     u32 size;
@@ -145,12 +187,12 @@ model_var* mv_cross_entropy(
 model_program model_prog_create(
     mem_arena* arena, model_context* model, model_var* out_var
 );
-void model_prog_compute(model_program* prog);
+b32 model_prog_compute(model_program* prog);
 void model_prog_compute_grads(model_program* prog);
 
 model_context* model_create(mem_arena* arena);
 void model_compile(mem_arena* arena, model_context* model);
-void model_feedforward(model_context* model);
+b32 model_feedforward(model_context* model);
 void model_train(
     model_context* model,
     const model_training_desc* training_desc
@@ -161,42 +203,82 @@ void create_mnist_model(mem_arena* arena, model_context* model);
 
 int main(void) {
     mem_arena* perm_arena = arena_create(GiB(1), MiB(1));
+    if (perm_arena == NULL) {
+        fprintf(stderr, "Error: Failed to allocate memory arena.\n");
+        return 1;
+    }
 
-    matrix* train_images = mat_load(perm_arena, 60000, 784, "train_images.mat");
-    matrix* test_images = mat_load(perm_arena, 10000, 784, "test_images.mat");
-    matrix* train_labels = mat_create(perm_arena, 60000, 10);
-    matrix* test_labels = mat_create(perm_arena, 10000, 10);
+    matrix* train_images = mat_load(perm_arena, MNIST_TRAIN_SIZE, MNIST_INPUT_SIZE, "train_images.mat");
+    matrix* test_images = mat_load(perm_arena, MNIST_TEST_SIZE, MNIST_INPUT_SIZE, "test_images.mat");
+
+    if (train_images == NULL || test_images == NULL) {
+        fprintf(stderr, "Error: Data files not found. Please run 'python mnist.py' first to generate the data files.\n");
+        return 1;
+    }
+
+    matrix* train_labels = mat_create(perm_arena, MNIST_TRAIN_SIZE, MNIST_NUM_CLASSES);
+    matrix* test_labels = mat_create(perm_arena, MNIST_TEST_SIZE, MNIST_NUM_CLASSES);
 
     {
-        matrix* train_labels_file = mat_load(perm_arena, 60000, 1, "train_labels.mat");
-        matrix* test_labels_file = mat_load(perm_arena, 10000, 1, "test_labels.mat");
+        matrix* train_labels_file = mat_load(perm_arena, MNIST_TRAIN_SIZE, MNIST_LABEL_DIMS, "train_labels.mat");
+        matrix* test_labels_file = mat_load(perm_arena, MNIST_TEST_SIZE, MNIST_LABEL_DIMS, "test_labels.mat");
 
-        for (u32 i = 0; i < 60000; i++) {
-            u32 num = train_labels_file->data[i];
-            train_labels->data[i * 10 + num] = 1.0f;
+        if (train_labels_file == NULL || test_labels_file == NULL) {
+            fprintf(stderr, "Error: Label files not found. Please run 'python mnist.py' first to generate the data files.\n");
+            return 1;
         }
 
-        for (u32 i = 0; i < 10000; i++) {
-            u32 num = test_labels_file->data[i];
-            test_labels->data[i * 10 + num] = 1.0f;
+        for (u32 i = 0; i < MNIST_TRAIN_SIZE; i++) {
+            u32 num = (u32)train_labels_file->data[i];
+            if (num >= MNIST_NUM_CLASSES) {
+                fprintf(stderr, "Error: Invalid label value %u in train_labels.mat at index %u. Expected value < %u.\n",
+                        num, i, MNIST_NUM_CLASSES);
+                return 1;
+            }
+            train_labels->data[i * MNIST_NUM_CLASSES + num] = 1.0f;
+        }
+
+        for (u32 i = 0; i < MNIST_TEST_SIZE; i++) {
+            u32 num = (u32)test_labels_file->data[i];
+            if (num >= MNIST_NUM_CLASSES) {
+                fprintf(stderr, "Error: Invalid label value %u in test_labels.mat at index %u. Expected value < %u.\n",
+                        num, i, MNIST_NUM_CLASSES);
+                return 1;
+            }
+            test_labels->data[i * MNIST_NUM_CLASSES + num] = 1.0f;
         }
     }
 
     draw_mnist_digit(test_images->data);
-    for (u32 i = 0; i < 10; i++) {
+    for (u32 i = 0; i < MNIST_NUM_CLASSES; i++) {
         printf("%.0f ", test_labels->data[i]);
     }
     printf("\n\n");
 
     model_context* model = model_create(perm_arena);
+    if (model == NULL) {
+        fprintf(stderr, "Error: Failed to create model context.\n");
+        return 1;
+    }
+
     create_mnist_model(perm_arena, model);
+
+    // Validate model structure
+    if (model->input == NULL || model->output == NULL || model->cost == NULL) {
+        fprintf(stderr, "Error: Model structure is incomplete. Missing input, output, or cost node.\n");
+        return 1;
+    }
+
     model_compile(perm_arena, model);
 
-    memcpy(model->input->val->data, test_images->data, sizeof(f32) * 784);
-    model_feedforward(model);
+    memcpy(model->input->val->data, test_images->data, sizeof(f32) * MNIST_INPUT_SIZE);
+    if (!model_feedforward(model)) {
+        fprintf(stderr, "Error: Failed to compute pre-training output.\n");
+        return 1;
+    }
 
     printf("pre-training output: ");
-    for (u32 i = 0; i < 10; i++) {
+    for (u32 i = 0; i < MNIST_NUM_CLASSES; i++) {
         printf("%.2f ", model->output->val->data[i]);
     }
     printf("\n");
@@ -207,16 +289,19 @@ int main(void) {
         .test_images = test_images,
         .test_labels = test_labels,
 
-        .epochs = 10,
-        .batch_size = 50,
-        .learning_rate = 0.01f
+        .epochs = DEFAULT_EPOCHS,
+        .batch_size = DEFAULT_BATCH_SIZE,
+        .learning_rate = DEFAULT_LEARNING_RATE
     };
     model_train(model, &training_desc);
-    
-    memcpy(model->input->val->data, test_images->data, sizeof(f32) * 784);
-    model_feedforward(model);
+
+    memcpy(model->input->val->data, test_images->data, sizeof(f32) * MNIST_INPUT_SIZE);
+    if (!model_feedforward(model)) {
+        fprintf(stderr, "Error: Failed to compute post-training output.\n");
+        return 1;
+    }
     printf("post-training output: ");
-    for (u32 i = 0; i < 10; i++) {
+    for (u32 i = 0; i < MNIST_NUM_CLASSES; i++) {
         printf("%f ", model->output->val->data[i]);
     }
     printf("\n\n");
@@ -228,9 +313,9 @@ int main(void) {
 }
 
 void draw_mnist_digit(f32* data) {
-    for (u32 y = 0; y < 28; y++) {
-        for (u32 x = 0; x < 28; x++) {
-            f32 num = data[x + y * 28];
+    for (u32 y = 0; y < MNIST_PIXEL_WIDTH; y++) {
+        for (u32 x = 0; x < MNIST_PIXEL_WIDTH; x++) {
+            f32 num = data[x + y * MNIST_PIXEL_WIDTH];
             u32 col = 232 + (u32)(num * 23);
             printf("\x1b[48;5;%dm  ", col);
         }
@@ -240,22 +325,22 @@ void draw_mnist_digit(f32* data) {
 }
 
 void create_mnist_model(mem_arena* arena, model_context* model) {
-    model_var* input = mv_create(arena, model, 784, 1, MV_FLAG_INPUT);
+    model_var* input = mv_create(arena, model, MNIST_INPUT_SIZE, 1, MV_FLAG_INPUT);
 
-    model_var* W0 = mv_create(arena, model, 16, 784, MV_FLAG_REQUIRES_GRAD | MV_FLAG_PARAMETER);
-    model_var* W1 = mv_create(arena, model, 16, 16, MV_FLAG_REQUIRES_GRAD | MV_FLAG_PARAMETER);
-    model_var* W2 = mv_create(arena, model, 10, 16, MV_FLAG_REQUIRES_GRAD | MV_FLAG_PARAMETER);
+    model_var* W0 = mv_create(arena, model, MODEL_HIDDEN_SIZE, MNIST_INPUT_SIZE, MV_FLAG_REQUIRES_GRAD | MV_FLAG_PARAMETER);
+    model_var* W1 = mv_create(arena, model, MODEL_HIDDEN_SIZE, MODEL_HIDDEN_SIZE, MV_FLAG_REQUIRES_GRAD | MV_FLAG_PARAMETER);
+    model_var* W2 = mv_create(arena, model, MNIST_NUM_CLASSES, MODEL_HIDDEN_SIZE, MV_FLAG_REQUIRES_GRAD | MV_FLAG_PARAMETER);
 
-    f32 bound0 = sqrtf(6.0f / (784 + 16));
-    f32 bound1 = sqrtf(6.0f / (16 + 16));
-    f32 bound2 = sqrtf(6.0f / (16 + 10));
+    f32 bound0 = sqrtf(6.0f / (MNIST_INPUT_SIZE + MODEL_HIDDEN_SIZE));
+    f32 bound1 = sqrtf(6.0f / (MODEL_HIDDEN_SIZE + MODEL_HIDDEN_SIZE));
+    f32 bound2 = sqrtf(6.0f / (MODEL_HIDDEN_SIZE + MNIST_NUM_CLASSES));
     mat_fill_rand(W0->val, -bound0, bound0);
     mat_fill_rand(W1->val, -bound1, bound1);
     mat_fill_rand(W2->val, -bound2, bound2);
 
-    model_var* b0 = mv_create(arena, model, 16, 1, MV_FLAG_REQUIRES_GRAD | MV_FLAG_PARAMETER);
-    model_var* b1 = mv_create(arena, model, 16, 1, MV_FLAG_REQUIRES_GRAD | MV_FLAG_PARAMETER);
-    model_var* b2 = mv_create(arena, model, 10, 1, MV_FLAG_REQUIRES_GRAD | MV_FLAG_PARAMETER);
+    model_var* b0 = mv_create(arena, model, MODEL_HIDDEN_SIZE, 1, MV_FLAG_REQUIRES_GRAD | MV_FLAG_PARAMETER);
+    model_var* b1 = mv_create(arena, model, MODEL_HIDDEN_SIZE, 1, MV_FLAG_REQUIRES_GRAD | MV_FLAG_PARAMETER);
+    model_var* b2 = mv_create(arena, model, MNIST_NUM_CLASSES, 1, MV_FLAG_REQUIRES_GRAD | MV_FLAG_PARAMETER);
 
     model_var* z0_a = mv_matmul(arena, model, W0, input, 0);
     model_var* z0_b = mv_add(arena, model, z0_a, b0, 0);
@@ -270,7 +355,7 @@ void create_mnist_model(mem_arena* arena, model_context* model) {
     model_var* z2_b = mv_add(arena, model, z2_a, b2, 0);
     model_var* output = mv_softmax(arena, model, z2_b, MV_FLAG_OUTPUT);
 
-    model_var* y = mv_create(arena, model, 10, 1, MV_FLAG_DESIRED_OUTPUT);
+    model_var* y = mv_create(arena, model, MNIST_NUM_CLASSES, 1, MV_FLAG_DESIRED_OUTPUT);
 
     model_var* cost = mv_cross_entropy(arena, model, y, output, MV_FLAG_COST);
 }
@@ -286,19 +371,42 @@ matrix* mat_create(mem_arena* arena, u32 rows, u32 cols) {
 }
 
 matrix* mat_load(mem_arena* arena, u32 rows, u32 cols, const char* filename) {
+    FILE* f = fopen(filename, "rb");
+    if (f == NULL) {
+        return NULL;
+    }
+
     matrix* mat = mat_create(arena, rows, cols);
 
-    FILE* f = fopen(filename, "rb");
+    // Get file size
+    if (fseek(f, 0, SEEK_END) != 0) {
+        fclose(f);
+        return NULL;
+    }
 
-    fseek(f, 0, SEEK_END);
-    u64 size = ftell(f);
-    fseek(f, 0, SEEK_SET);
+    i64 file_size = ftell(f);
+    if (file_size < 0) {
+        fclose(f);
+        return NULL;
+    }
 
-    size = MIN(size, sizeof(f32) * rows * cols);
+    if (fseek(f, 0, SEEK_SET) != 0) {
+        fclose(f);
+        return NULL;
+    }
 
-    fread(mat->data, 1, size, f);
+    // Read data
+    u64 expected_size = sizeof(f32) * (u64)rows * cols;
+    u64 read_size = MIN((u64)file_size, expected_size);
 
+    u64 bytes_read = fread(mat->data, 1, read_size, f);
     fclose(f);
+
+    if (bytes_read != read_size) {
+        fprintf(stderr, "Error: Failed to read %s. Expected %" PRIu64 " bytes, got %" PRIu64 " bytes.\n",
+                filename, read_size, bytes_read);
+        return NULL;
+    }
 
     return mat;
 }
@@ -379,7 +487,7 @@ b32 mat_add(matrix* out, const matrix* a, const matrix* b) {
         out->data[i] = a->data[i] + b->data[i];
     }
 
-    return false;
+    return true;
 }
 
 b32 mat_sub(matrix* out, const matrix* a, const matrix* b) {
@@ -395,7 +503,7 @@ b32 mat_sub(matrix* out, const matrix* a, const matrix* b) {
         out->data[i] = a->data[i] - b->data[i];
     }
 
-    return false;
+    return true;
 }
 
 void _mat_mul_nn(matrix* out, const matrix* a, const matrix* b) {
@@ -610,6 +718,7 @@ model_var* mv_create(
     if (flags & MV_FLAG_DESIRED_OUTPUT) { model->desired_output = out; }
     if (flags & MV_FLAG_COST) { model->cost = out; }
 
+
     return out;
 }
 
@@ -618,7 +727,7 @@ model_var* _mv_unary_impl(
     model_var* input, u32 rows, u32 cols,
     u32 flags, model_var_op op
 ) {
-    if (input->flags & MV_FLAG_REQUIRES_GRAD) {
+    if (mv_requires_grad(input)) {
         flags |= MV_FLAG_REQUIRES_GRAD;
     }
 
@@ -636,10 +745,7 @@ model_var* _mv_binary_impl(
     u32 rows, u32 cols,
     u32 flags, model_var_op op
 ) {
-    if (
-        (a->flags & MV_FLAG_REQUIRES_GRAD) ||
-        (b->flags & MV_FLAG_REQUIRES_GRAD)
-    ) {
+    if (mv_requires_grad(a) || mv_requires_grad(b)) {
         flags |= MV_FLAG_REQUIRES_GRAD;
     }
 
@@ -801,7 +907,7 @@ model_program model_prog_create(
     return prog;
 }
 
-void model_prog_compute(model_program* prog) {
+b32 model_prog_compute(model_program* prog) {
     for (u32 i = 0; i < prog->size; i++) {
         model_var* cur = prog->vars[i];
 
@@ -814,32 +920,63 @@ void model_prog_compute(model_program* prog) {
 
             case _MV_OP_UNARY_START: break;
 
-            case MV_OP_RELU: { mat_relu(cur->val, a->val); } break;
-            case MV_OP_SOFTMAX: { mat_softmax(cur->val, a->val); } break;
+            case MV_OP_RELU: {
+                if (!mat_relu(cur->val, a->val)) {
+                    fprintf(stderr, "Error: ReLU operation failed at variable index %u\n", cur->index);
+                    return false;
+                }
+            } break;
+
+            case MV_OP_SOFTMAX: {
+                if (!mat_softmax(cur->val, a->val)) {
+                    fprintf(stderr, "Error: Softmax operation failed at variable index %u\n", cur->index);
+                    return false;
+                }
+            } break;
 
             case _MV_OP_BINARY_START: break;
 
-            case MV_OP_ADD: { mat_add(cur->val, a->val, b->val); } break;
-            case MV_OP_SUB: { mat_sub(cur->val, a->val, b->val); } break;
-            case MV_OP_MATMUL: {
-                mat_mul(cur->val, a->val, b->val, 1, 0, 0); 
+            case MV_OP_ADD: {
+                if (!mat_add(cur->val, a->val, b->val)) {
+                    fprintf(stderr, "Error: Matrix addition failed at variable index %u\n", cur->index);
+                    return false;
+                }
             } break;
+
+            case MV_OP_SUB: {
+                if (!mat_sub(cur->val, a->val, b->val)) {
+                    fprintf(stderr, "Error: Matrix subtraction failed at variable index %u\n", cur->index);
+                    return false;
+                }
+            } break;
+
+            case MV_OP_MATMUL: {
+                if (!mat_mul(cur->val, a->val, b->val, 1, 0, 0)) {
+                    fprintf(stderr, "Error: Matrix multiplication failed at variable index %u\n", cur->index);
+                    return false;
+                }
+            } break;
+
             case MV_OP_CROSS_ENTROPY: {
-                mat_cross_entropy(cur->val, a->val, b->val);
+                if (!mat_cross_entropy(cur->val, a->val, b->val)) {
+                    fprintf(stderr, "Error: Cross entropy operation failed at variable index %u\n", cur->index);
+                    return false;
+                }
             } break;
         }
     }
+    return true;
 }
 
 void model_prog_compute_grads(model_program* prog) {
     for (u32 i = 0; i < prog->size; i++) {
         model_var* cur = prog->vars[i];
 
-        if ((cur->flags & MV_FLAG_REQUIRES_GRAD) != MV_FLAG_REQUIRES_GRAD) {
+        if (!mv_requires_grad(cur)) {
             continue;
         }
 
-        if (cur->flags & MV_FLAG_PARAMETER) {
+        if (mv_is_parameter(cur)) {
             continue;
         }
 
@@ -851,7 +988,7 @@ void model_prog_compute_grads(model_program* prog) {
     for (i64 i = (i64)prog->size - 1; i >= 0; i--) {
         model_var* cur = prog->vars[i];
 
-        if ((cur->flags * MV_FLAG_REQUIRES_GRAD) == 0) {
+        if (!mv_requires_grad(cur)) {
             continue;
         }
 
@@ -860,18 +997,11 @@ void model_prog_compute_grads(model_program* prog) {
 
         u32 num_inputs = MV_NUM_INPUTS(cur->op);
 
-        if (
-            num_inputs == 1 &&
-            (a->flags & MV_FLAG_REQUIRES_GRAD) != MV_FLAG_REQUIRES_GRAD
-        ) {
+        if (num_inputs == 1 && !mv_requires_grad(a)) {
             continue;
         }
 
-        if (
-            num_inputs == 2 &&
-            (a->flags & MV_FLAG_REQUIRES_GRAD) != MV_FLAG_REQUIRES_GRAD && 
-            (b->flags & MV_FLAG_REQUIRES_GRAD) != MV_FLAG_REQUIRES_GRAD
-        ) {
+        if (num_inputs == 2 && !mv_requires_grad(a) && !mv_requires_grad(b)) {
             continue;
         }
 
@@ -891,31 +1021,31 @@ void model_prog_compute_grads(model_program* prog) {
             case _MV_OP_BINARY_START: break;
 
             case MV_OP_ADD: {
-                if (a->flags & MV_FLAG_REQUIRES_GRAD) {
+                if (mv_requires_grad(a)) {
                     mat_add(a->grad, a->grad, cur->grad);
                 }
 
-                if (b->flags & MV_FLAG_REQUIRES_GRAD) {
+                if (mv_requires_grad(b)) {
                     mat_add(b->grad, b->grad, cur->grad);
                 }
             } break;
 
             case MV_OP_SUB: {
-                if (a->flags & MV_FLAG_REQUIRES_GRAD) {
+                if (mv_requires_grad(a)) {
                     mat_add(a->grad, a->grad, cur->grad);
                 }
 
-                if (b->flags & MV_FLAG_REQUIRES_GRAD) {
+                if (mv_requires_grad(b)) {
                     mat_sub(b->grad, b->grad, cur->grad);
                 }
             } break;
 
             case MV_OP_MATMUL: {
-                if (a->flags & MV_FLAG_REQUIRES_GRAD) {
+                if (mv_requires_grad(a)) {
                     mat_mul(a->grad, cur->grad, b->val, 0, 0, 1);
                 }
 
-                if (b->flags & MV_FLAG_REQUIRES_GRAD) {
+                if (mv_requires_grad(b)) {
                     mat_mul(b->grad, a->val, cur->grad, 0, 1, 0);
                 }
             } break;
@@ -948,8 +1078,12 @@ void model_compile(mem_arena* arena, model_context* model) {
     }
 }
 
-void model_feedforward(model_context* model) {
-    model_prog_compute(&model->forward_prog);
+b32 model_feedforward(model_context* model) {
+    if (!model_prog_compute(&model->forward_prog)) {
+        fprintf(stderr, "Error: Forward pass computation failed.\n");
+        return false;
+    }
+    return true;
 }
 
 void model_train(
@@ -989,7 +1123,7 @@ void model_train(
             for (u32 i = 0; i < model->cost_prog.size; i++) {
                 model_var* cur = model->cost_prog.vars[i];
 
-                if (cur->flags & MV_FLAG_PARAMETER) {
+                if (mv_is_parameter(cur)) {
                     mat_clear(cur->grad);
                 }
             }
@@ -1011,7 +1145,12 @@ void model_train(
                     sizeof(f32) * output_size
                 );
 
-                model_prog_compute(&model->cost_prog);
+                if (!model_prog_compute(&model->cost_prog)) {
+                    fprintf(stderr, "Error: Cost computation failed during training at epoch %u, batch %u, sample %u\n",
+                            epoch, batch, i);
+                    arena_scratch_release(scratch);
+                    return;
+                }
                 model_prog_compute_grads(&model->cost_prog);
 
                 avg_cost += mat_sum(model->cost->val);
@@ -1021,7 +1160,7 @@ void model_train(
             for (u32 i = 0; i < model->cost_prog.size; i++) {
                 model_var* cur = model->cost_prog.vars[i];
 
-                if ((cur->flags & MV_FLAG_PARAMETER) != MV_FLAG_PARAMETER) {
+                if (!mv_is_parameter(cur)) {
                     continue;
                 }
 
@@ -1057,7 +1196,12 @@ void model_train(
                 sizeof(f32) * output_size
             );
 
-            model_prog_compute(&model->cost_prog);
+            if (!model_prog_compute(&model->cost_prog)) {
+                fprintf(stderr, "Error: Cost computation failed during testing at epoch %u, test sample %u\n",
+                        epoch, i);
+                arena_scratch_release(scratch);
+                return;
+            }
 
             avg_cost += mat_sum(model->cost->val);
             num_correct +=
