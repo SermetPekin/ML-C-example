@@ -1,4 +1,5 @@
 [![Test](https://github.com/SermetPekin/ML-C-example/actions/workflows/test.yml/badge.svg)](https://github.com/SermetPekin/ML-C-example/actions/workflows/test.yml)
+
 # Machine Learning in C
 
 A machine learning project written in C, featuring neural network implementations and utilities for working with the MNIST dataset.
@@ -84,7 +85,6 @@ make test_prng      # Pseudo-random number generator tests
 - **Arena Allocator** (`test_arena`): Tests for memory allocation, deallocation, and temporary arena functionality
 - **PRNG** (`test_prng`): Tests for random number generation and value distribution
 
-Each test suite reports pass/fail counts and detailed error information for any failures.
 
 ## Development Notes
 
