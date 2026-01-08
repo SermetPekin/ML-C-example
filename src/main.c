@@ -1,120 +1,178 @@
 #define _CRT_SECURE_NO_WARNINGS
 
-#include <inttypes.h>
 #include <stdio.h>
+#include <string.h>
 
-#include "matrix.h"
+#include "config_parser.h"
+#include "model_builder.h"
+#include "label_utils.h"
 #include "model.h"
-#include "mnist.h"
-#include "config.h"
+#include "matrix.h"
 #include "utils/arena.h"
 
+int main(int argc, char** argv) {
+    // Parse command-line arguments
+    const char* config_file = (argc > 1) ? argv[1] : "model_config.txt";
 
-int main(void) {
+    // Initialize memory arena
     mem_arena* perm_arena = arena_create(GiB(1), MiB(1));
     if (perm_arena == NULL) {
         fprintf(stderr, "Error: Failed to allocate memory arena.\n");
         return 1;
     }
 
-    matrix* train_images = mat_load(perm_arena, MNIST_TRAIN_SIZE, MNIST_INPUT_SIZE, "train_images.mat");
-    matrix* test_images = mat_load(perm_arena, MNIST_TEST_SIZE, MNIST_INPUT_SIZE, "test_images.mat");
-
-    if (train_images == NULL || test_images == NULL) {
-        fprintf(stderr, "Error: Data files not found. Please run 'python mnist.py' first to generate the data files.\n");
+    // Parse configuration
+    ml_config config;
+    if (!config_parse(perm_arena, config_file, &config)) {
+        fprintf(stderr, "Error: Failed to parse config file '%s'\n", config_file);
         return 1;
     }
 
-    matrix* train_labels = mat_create(perm_arena, MNIST_TRAIN_SIZE, MNIST_NUM_CLASSES);
-    matrix* test_labels = mat_create(perm_arena, MNIST_TEST_SIZE, MNIST_NUM_CLASSES);
+    config_print(&config);
 
-    {
-        matrix* train_labels_file = mat_load(perm_arena, MNIST_TRAIN_SIZE, MNIST_LABEL_DIMS, "train_labels.mat");
-        matrix* test_labels_file = mat_load(perm_arena, MNIST_TEST_SIZE, MNIST_LABEL_DIMS, "test_labels.mat");
+    // Load training images
+    matrix* train_images = mat_load(perm_arena,
+        config.dataset.train_size,
+        config.dataset.input_size,
+        config.dataset.train_images_path);
 
-        if (train_labels_file == NULL || test_labels_file == NULL) {
-            fprintf(stderr, "Error: Label files not found. Please run 'python mnist.py' first to generate the data files.\n");
-            return 1;
-        }
-
-        for (u32 i = 0; i < MNIST_TRAIN_SIZE; i++) {
-            u32 num = (u32)train_labels_file->data[i];
-            if (num >= MNIST_NUM_CLASSES) {
-                fprintf(stderr, "Error: Invalid label value %u in train_labels.mat at index %u. Expected value < %u.\n",
-                        num, i, MNIST_NUM_CLASSES);
-                return 1;
-            }
-            train_labels->data[i * MNIST_NUM_CLASSES + num] = 1.0f;
-        }
-
-        for (u32 i = 0; i < MNIST_TEST_SIZE; i++) {
-            u32 num = (u32)test_labels_file->data[i];
-            if (num >= MNIST_NUM_CLASSES) {
-                fprintf(stderr, "Error: Invalid label value %u in test_labels.mat at index %u. Expected value < %u.\n",
-                        num, i, MNIST_NUM_CLASSES);
-                return 1;
-            }
-            test_labels->data[i * MNIST_NUM_CLASSES + num] = 1.0f;
-        }
+    if (train_images == NULL) {
+        fprintf(stderr, "Error: Failed to load training images from '%s'\n",
+                config.dataset.train_images_path);
+        return 1;
     }
 
-    draw_mnist_digit(test_images->data);
-    for (u32 i = 0; i < MNIST_NUM_CLASSES; i++) {
-        printf("%.0f ", test_labels->data[i]);
-    }
-    printf("\n\n");
+    // Load test images
+    matrix* test_images = mat_load(perm_arena,
+        config.dataset.test_size,
+        config.dataset.input_size,
+        config.dataset.test_images_path);
 
+    if (test_images == NULL) {
+        fprintf(stderr, "Error: Failed to load test images from '%s'\n",
+                config.dataset.test_images_path);
+        return 1;
+    }
+
+    // Load raw label data
+    // Start by loading as single column (works for integer indices)
+    matrix* train_labels_raw = mat_load(perm_arena,
+        config.dataset.train_size,
+        1,
+        config.dataset.train_labels_path);
+
+    matrix* test_labels_raw = mat_load(perm_arena,
+        config.dataset.test_size,
+        1,
+        config.dataset.test_labels_path);
+
+    if (train_labels_raw == NULL || test_labels_raw == NULL) {
+        fprintf(stderr, "Error: Failed to load label files\n");
+        return 1;
+    }
+
+    // Detect label format if auto
+    label_format_type actual_format = config.dataset.label_format;
+    if (actual_format == LABEL_FORMAT_AUTO) {
+        actual_format = label_detect_format(train_labels_raw, config.dataset.output_size);
+        printf("Auto-detected label format: %d\n", actual_format);
+    }
+
+    // Convert labels to one-hot format
+    matrix* train_labels = label_convert_to_onehot(perm_arena,
+        train_labels_raw,
+        actual_format,
+        config.dataset.output_size);
+
+    matrix* test_labels = label_convert_to_onehot(perm_arena,
+        test_labels_raw,
+        actual_format,
+        config.dataset.output_size);
+
+    if (train_labels == NULL || test_labels == NULL) {
+        fprintf(stderr, "Error: Failed to convert labels to one-hot format\n");
+        return 1;
+    }
+
+    // Validate labels
+    if (!label_validate(train_labels, LABEL_FORMAT_ONE_HOT, config.dataset.output_size)) {
+        fprintf(stderr, "Error: Invalid training labels\n");
+        return 1;
+    }
+
+    if (!label_validate(test_labels, LABEL_FORMAT_ONE_HOT, config.dataset.output_size)) {
+        fprintf(stderr, "Error: Invalid test labels\n");
+        return 1;
+    }
+
+    // Create model context
     model_context* model = model_create(perm_arena);
     if (model == NULL) {
         fprintf(stderr, "Error: Failed to create model context.\n");
         return 1;
     }
 
-    create_mnist_model(perm_arena, model);
+    // Build model from architecture config
+    if (!model_build_from_config(perm_arena, model, &config.architecture,
+                                 config.dataset.input_size,
+                                 config.dataset.output_size)) {
+        fprintf(stderr, "Error: Failed to build model from architecture config\n");
+        return 1;
+    }
 
     // Validate model structure
     if (model->input == NULL || model->output == NULL || model->cost == NULL) {
-        fprintf(stderr, "Error: Model structure is incomplete. Missing input, output, or cost node.\n");
+        fprintf(stderr, "Error: Model structure is incomplete.\n");
         return 1;
     }
 
+    // Compile model
     model_compile(perm_arena, model);
 
-    memcpy(model->input->val->data, test_images->data, sizeof(f32) * MNIST_INPUT_SIZE);
+    // Pre-training feedforward on first test sample
+    memcpy(model->input->val->data, test_images->data,
+           sizeof(f32) * config.dataset.input_size);
+
     if (!model_feedforward(model)) {
-        fprintf(stderr, "Error: Failed to compute pre-training output.\n");
+        fprintf(stderr, "Error: Pre-training feedforward failed.\n");
         return 1;
     }
 
-    printf("pre-training output: ");
-    for (u32 i = 0; i < MNIST_NUM_CLASSES; i++) {
+    printf("Pre-training output: ");
+    for (u32 i = 0; i < config.dataset.output_size; i++) {
         printf("%.2f ", model->output->val->data[i]);
     }
     printf("\n");
 
+    // Train the model
     model_training_desc training_desc = {
         .train_images = train_images,
         .train_labels = train_labels,
         .test_images = test_images,
         .test_labels = test_labels,
-
-        .epochs = DEFAULT_EPOCHS,
-        .batch_size = DEFAULT_BATCH_SIZE,
-        .learning_rate = DEFAULT_LEARNING_RATE
+        .epochs = config.training.epochs,
+        .batch_size = config.training.batch_size,
+        .learning_rate = config.training.learning_rate
     };
+
     model_train(model, &training_desc);
 
-    memcpy(model->input->val->data, test_images->data, sizeof(f32) * MNIST_INPUT_SIZE);
+    // Post-training feedforward on first test sample
+    memcpy(model->input->val->data, test_images->data,
+           sizeof(f32) * config.dataset.input_size);
+
     if (!model_feedforward(model)) {
-        fprintf(stderr, "Error: Failed to compute post-training output.\n");
+        fprintf(stderr, "Error: Post-training feedforward failed.\n");
         return 1;
     }
-    printf("post-training output: ");
-    for (u32 i = 0; i < MNIST_NUM_CLASSES; i++) {
+
+    printf("Post-training output: ");
+    for (u32 i = 0; i < config.dataset.output_size; i++) {
         printf("%f ", model->output->val->data[i]);
     }
     printf("\n\n");
 
+    // Cleanup
     arena_destroy(perm_arena);
 
     return 0;

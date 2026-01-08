@@ -1,0 +1,34 @@
+# Iris Flower Classification Configuration
+# Multi-class classification: Setosa, Versicolor, Virginica
+# Dataset: 150 samples, 4 features (sepal length/width, petal length/width)
+# Download: https://archive.ics.uci.edu/ml/datasets/iris
+
+[dataset]
+# Data file paths (generate using Python sklearn or download from UCI)
+train_images = examples/iris/data/iris_train_features.mat
+train_labels = examples/iris/data/iris_train_labels.mat
+test_images = examples/iris/data/iris_test_features.mat
+test_labels = examples/iris/data/iris_test_labels.mat
+
+# Dataset dimensions
+train_size = 120          # ~80% of 150 samples for training
+test_size = 30            # ~20% of 150 samples for testing
+input_size = 4            # 4 features: sepal length, sepal width, petal length, petal width
+output_size = 3           # 3 classes: Setosa (0), Versicolor (1), Virginica (2)
+label_format = integer_indices  # Labels are 0, 1, or 2
+
+[training]
+# Training hyperparameters
+epochs = 100
+batch_size = 16
+learning_rate = 0.01
+
+[architecture]
+# Shallow network suitable for small dataset (150 samples)
+# Input (4) -> Hidden (8) -> Output (3)
+
+# Hidden layer: 4 features -> 8 units with ReLU
+layer = dense 4 8 relu
+
+# Output layer: 8 units -> 3 classes with softmax
+layer = dense 8 3 softmax

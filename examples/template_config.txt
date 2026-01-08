@@ -1,0 +1,93 @@
+# Generic Template Configuration File
+# Copy this file and modify for your own dataset
+# Filename: your_dataset_config.txt
+
+[dataset]
+# Path to training image/feature data file (.mat binary format)
+# Each row is a sample, columns are features
+train_images = your_train_images.mat
+
+# Path to training labels file (.mat binary format)
+# Format: single column with integer class indices OR
+# num_classes columns with one-hot encoding OR
+# num_classes columns with raw float values
+train_labels = your_train_labels.mat
+
+# Path to test/validation image/feature data file
+test_images = your_test_images.mat
+
+# Path to test/validation labels file
+test_labels = your_test_labels.mat
+
+# Number of training samples
+train_size = 1000
+
+# Number of test/validation samples
+test_size = 200
+
+# Number of input features (dimensions of each sample)
+# Examples:
+#   - MNIST: 784 (28x28 pixels)
+#   - Iris: 4 (sepal/petal measurements)
+#   - CIFAR-10: 3072 (32x32x3 flattened)
+input_size = 50
+
+# Number of output classes (categories to predict)
+# Examples:
+#   - Binary classification: 2
+#   - Iris/CIFAR-10: 3 or 10
+#   - ImageNet: 1000
+output_size = 5
+
+# Label format in training data
+# Options:
+#   - integer_indices: Single column, values 0 to (output_size-1)
+#   - one_hot: output_size columns, exactly one 1 per row, rest 0s
+#   - raw_floats: output_size columns, any float values (for regression/soft labels)
+#   - auto: Auto-detect from data
+label_format = integer_indices
+
+[training]
+# Number of passes through entire training dataset
+epochs = 20
+
+# Number of samples per training batch
+# Larger batch = faster but less frequent updates
+# Typical values: 16, 32, 64, 128, 256
+batch_size = 64
+
+# Learning rate (step size for weight updates)
+# Smaller = more stable but slower
+# Typical range: 0.0001 to 0.1
+# Start with 0.01 and adjust
+learning_rate = 0.01
+
+[architecture]
+# Define neural network layers
+# Format: layer = <type> <input_size> <output_size> <activation>
+#
+# Layer types:
+#   - dense: Standard fully-connected layer
+#   - residual_dense: Dense layer with residual connection (input_size == output_size)
+#
+# Activation functions:
+#   - relu: Rectified Linear Unit (good for hidden layers)
+#   - softmax: Softmax (use ONLY on final output layer for classification)
+#   - none: No activation (linear)
+#
+# IMPORTANT:
+#   - First layer input_size MUST equal dataset.input_size
+#   - Each subsequent layer input_size MUST equal previous layer output_size
+#   - Last layer output_size MUST equal dataset.output_size
+#   - Last layer should use softmax activation for classification
+
+# Example: Simple 2-layer network
+# Input (50) -> Hidden (32) with ReLU -> Output (5) with Softmax
+layer = dense 50 32 relu
+layer = dense 32 5 softmax
+
+# Example: 3-layer network with residual connection
+# Uncomment to use instead:
+# layer = dense 50 32 relu
+# layer = residual_dense 32 32 relu
+# layer = dense 32 5 softmax

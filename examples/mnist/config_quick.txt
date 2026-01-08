@@ -1,0 +1,24 @@
+# MNIST Quick Test Configuration
+# Minimal epochs for testing
+
+[dataset]
+train_images = train_images.mat
+train_labels = train_labels.mat
+test_images = test_images.mat
+test_labels = test_labels.mat
+
+train_size = 60000
+test_size = 10000
+input_size = 784
+output_size = 10
+label_format = integer_indices
+
+[training]
+epochs = 2
+batch_size = 50
+learning_rate = 0.01
+
+[architecture]
+layer = dense 784 16 relu
+layer = residual_dense 16 16 relu
+layer = dense 16 10 softmax
