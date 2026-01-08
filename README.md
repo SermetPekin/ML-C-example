@@ -49,6 +49,9 @@ make run CONFIG=examples/mnist_config.txt
 - **Multiple label formats**: Auto-detects or accepts integer indices, one-hot, raw floats
 - **Generic training**: Same binary works with any dataset—change config, not code
 - **Validated datasets**: Tested on Iris, Breast Cancer, MNIST, CIFAR-10
+- **Comprehensive metrics**: Per-class precision, recall, F1-score and overall accuracy
+- **Confusion matrix**: Visual representation of prediction accuracy per class
+- **Results export**: Evaluation results saved to timestamped files in table format
 
 ## Optimizers
 
@@ -73,6 +76,26 @@ adam_epsilon = 1e-8          # Numerical stability constant
 ```
 
 See `examples/mnist/mnist_adam.txt` for a complete Adam configuration example.
+
+## Evaluation & Metrics
+
+After training, the framework automatically evaluates your model on the test set and generates comprehensive metrics:
+
+**Per-Class Metrics (displayed in table format):**
+- **Precision**: Ratio of correct positive predictions to all positive predictions
+- **Recall**: Ratio of correct positive predictions to all actual positives
+- **F1-Score**: Harmonic mean of precision and recall
+- **Support**: Number of samples for each class
+
+**Overall Metrics:**
+- **Overall Accuracy**: Percentage of correct predictions across all classes
+- **Average Loss**: Mean loss value on the test set
+
+**Confusion Matrix:**
+Shows actual vs predicted class labels, helping identify which classes are being confused with each other.
+
+**Results Export:**
+All evaluation results are automatically saved to a timestamped file (e.g., `results_20260109_010005.txt`) in a formatted table layout for easy review and comparison across different training runs.
 
 ## Tests
 
