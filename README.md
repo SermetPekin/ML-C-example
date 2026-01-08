@@ -53,6 +53,17 @@ make run CONFIG=examples/mnist_config.txt
 - **Confusion matrix**: Visual representation of prediction accuracy per class
 - **Results export**: Evaluation results saved to timestamped files in table format
 
+## Improvements Over Original
+
+This implementation significantly enhances [Magicalbat](https://github.com/Magicalbat)'s original framework:
+
+- **Generic Dataset Support**: Completely decoupled from MNIST-specific code. Train on any dataset—Iris, Breast Cancer, CIFAR-10, or custom data—without modifications
+- **Config-Driven Architecture**: Define your entire network in a text config file. Change architectures, hyperparameters, and datasets without recompiling the binary
+- **Flexible Label Formats**: Automatically detects and handles integer indices, one-hot encoded labels, or raw float values
+- **Multiple Optimizers**: Choose between SGD and Adam with full hyperparameter control, enabling better convergence for different problem types
+- **Comprehensive Metrics & Visualization**: Built-in per-class precision, recall, F1-score, confusion matrices, and timestamped results export
+- **Production-Ready**: No external dependencies—all matrix operations, backpropagation, and memory management implemented from scratch in pure C
+
 ## Optimizers
 
 The framework supports multiple optimization algorithms. Configure your choice in the `[training]` section:
@@ -106,10 +117,3 @@ make test_arena        # Memory allocator
 make test_prng         # Random number generation
 ```
 
-## Notes
-
-Based on [Magicalbat](https://github.com/Magicalbat)'s implementation. Major enhancements include:
-- Decoupled from MNIST-specific code for generic dataset support
-- Config-driven architecture (no code changes needed for different networks)
-- Multi-format label support (integer indices, one-hot, raw floats)
-- Multiple optimization algorithms (SGD and Adam)
