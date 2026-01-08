@@ -2,7 +2,7 @@
 
 # Machine Learning in C
 
-A generic neural network framework in pure C. Configure the architecture and data paths via YAML, compile once, run on any dataset. No dependencies beyond standard C—all matrix operations, training, and memory management built from scratch.
+A generic neural network framework in pure C. Configure the architecture and data paths via a simple text config file, compile once, run on any dataset. No dependencies beyond standard C—all matrix operations, training, and memory management built from scratch.
 
 ## Setup
 
