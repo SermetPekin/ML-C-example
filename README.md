@@ -1,4 +1,4 @@
-[![Test](https://github.com/SermetPekin/ML-C-example/actions/workflows/test.yml/badge.svg?1)](https://github.com/SermetPekin/ML-C-example/actions/workflows/test.yml?1)
+[![Test](https://github.com/SermetPekin/ML-C-example/actions/workflows/test.yml/badge.svg?2)](https://github.com/SermetPekin/ML-C-example/actions/workflows/test.yml?2)
 
 # Machine Learning in C
 
