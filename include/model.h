@@ -44,7 +44,7 @@ typedef struct model_var {
     matrix* val;
     matrix* grad;
 
-    // Adam optimizer state (allocated only when using Adam)
+    // Adam state (only allocated for Adam optimizer)
     matrix* adam_m;
     matrix* adam_v;
 

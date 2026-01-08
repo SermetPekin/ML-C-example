@@ -3,19 +3,16 @@
 #include <stdlib.h>
 #include "config_parser.h"
 
-// Helper: Skip whitespace
 static void skip_whitespace(const char* line, u32* pos) {
     while (line[*pos] == ' ' || line[*pos] == '\t') {
         (*pos)++;
     }
 }
 
-// Helper: Parse string value
 static b32 parse_string(const char* line, const char* key, char* out_value, u32 max_len) {
     u32 pos = 0;
     skip_whitespace(line, &pos);
 
-    // Check if line starts with the key
     u32 key_len = strlen(key);
     if (strncmp(&line[pos], key, key_len) != 0) {
         return 0;
@@ -24,7 +21,6 @@ static b32 parse_string(const char* line, const char* key, char* out_value, u32 
     pos += key_len;
     skip_whitespace(line, &pos);
 
-    // Expect '='
     if (line[pos] != '=') {
         return 0;
     }
@@ -32,19 +28,15 @@ static b32 parse_string(const char* line, const char* key, char* out_value, u32 
     pos++;
     skip_whitespace(line, &pos);
 
-    // Copy value until newline/comment
     u32 out_pos = 0;
     while (line[pos] != '\0' && line[pos] != '\n' && line[pos] != '#' && out_pos < max_len - 1) {
-        // Trim trailing whitespace
         if (line[pos] == ' ' || line[pos] == '\t') {
-            // Look ahead for non-whitespace
             u32 lookahead = pos + 1;
             while (line[lookahead] == ' ' || line[lookahead] == '\t') {
                 lookahead++;
             }
 
             if (line[lookahead] == '\0' || line[lookahead] == '\n' || line[lookahead] == '#') {
-                // End of value
                 break;
             }
         }
@@ -56,7 +48,6 @@ static b32 parse_string(const char* line, const char* key, char* out_value, u32 
     return out_pos > 0;
 }
 
-// Helper: Parse unsigned integer value
 static b32 parse_uint(const char* line, const char* key, u32* out_value) {
     char value_str[64];
     if (!parse_string(line, key, value_str, sizeof(value_str))) {
@@ -73,7 +64,6 @@ static b32 parse_uint(const char* line, const char* key, u32* out_value) {
     return 1;
 }
 
-// Helper: Parse float value
 static b32 parse_float(const char* line, const char* key, f32* out_value) {
     char value_str[64];
     if (!parse_string(line, key, value_str, sizeof(value_str))) {
@@ -90,7 +80,6 @@ static b32 parse_float(const char* line, const char* key, f32* out_value) {
     return 1;
 }
 
-// Helper: Parse enum - optimizer type
 static b32 parse_optimizer_type(const char* line, const char* key, optimizer_type* out_optimizer) {
     char value_str[64];
     if (!parse_string(line, key, value_str, sizeof(value_str))) {
@@ -109,7 +98,6 @@ static b32 parse_optimizer_type(const char* line, const char* key, optimizer_typ
     }
 }
 
-// Helper: Parse enum - label format
 static b32 parse_label_format(const char* line, const char* key, label_format_type* out_format) {
     char value_str[64];
     if (!parse_string(line, key, value_str, sizeof(value_str))) {
@@ -132,14 +120,13 @@ static b32 parse_label_format(const char* line, const char* key, label_format_ty
     return 1;
 }
 
-// Helper: Parse layer specification
 static b32 parse_layer_spec(const char* line, layer_spec* out_spec) {
     char value_str[256];
     if (!parse_string(line, "layer", value_str, sizeof(value_str))) {
         return 0;
     }
 
-    // Parse: "dense 784 16 relu" or "residual_dense 16 16 relu"
+    // Format: "type input output activation"
     char type_str[32], input_str[32], output_str[32], activation_str[32];
     int matches = sscanf(value_str, "%s %s %s %s", type_str, input_str, output_str, activation_str);
 
@@ -148,7 +135,6 @@ static b32 parse_layer_spec(const char* line, layer_spec* out_spec) {
         return 0;
     }
 
-    // Parse layer type
     if (strcmp(type_str, "dense") == 0) {
         out_spec->type = LAYER_TYPE_DENSE;
     } else if (strcmp(type_str, "residual_dense") == 0) {
@@ -158,7 +144,6 @@ static b32 parse_layer_spec(const char* line, layer_spec* out_spec) {
         return 0;
     }
 
-    // Parse sizes
     char* endptr;
     long input_size = strtol(input_str, &endptr, 10);
     if (*endptr != '\0' || input_size <= 0) {
@@ -175,7 +160,6 @@ static b32 parse_layer_spec(const char* line, layer_spec* out_spec) {
     out_spec->input_size = (u32)input_size;
     out_spec->output_size = (u32)output_size;
 
-    // Parse activation
     if (strcmp(activation_str, "none") == 0) {
         out_spec->activation = ACTIVATION_NONE;
     } else if (strcmp(activation_str, "relu") == 0) {
@@ -196,7 +180,6 @@ b32 config_parse(mem_arena* arena, const char* filename, ml_config* out_config) 
         return 0;
     }
 
-    // Initialize defaults
     memset(out_config, 0, sizeof(ml_config));
     out_config->dataset.label_format = LABEL_FORMAT_AUTO;
     out_config->training.epochs = 10;
@@ -221,21 +204,18 @@ b32 config_parse(mem_arena* arena, const char* filename, ml_config* out_config) 
     while (fgets(line, sizeof(line), file) != NULL) {
         line_num++;
 
-        // Remove trailing newline
         u32 len = strlen(line);
         if (len > 0 && line[len - 1] == '\n') {
             line[len - 1] = '\0';
             len--;
         }
 
-        // Skip empty lines and comments
         u32 pos = 0;
         skip_whitespace(line, &pos);
         if (line[pos] == '\0' || line[pos] == '#') {
             continue;
         }
 
-        // Check for section headers
         if (line[pos] == '[') {
             if (strncmp(&line[pos], "[dataset]", 9) == 0) {
                 current_section = 1;
@@ -250,9 +230,7 @@ b32 config_parse(mem_arena* arena, const char* filename, ml_config* out_config) 
             continue;
         }
 
-        // Parse based on current section
         if (current_section == 1) {
-            // Dataset section
             if (parse_string(line, "train_images", out_config->dataset.train_images_path,
                             sizeof(out_config->dataset.train_images_path))) {
                 continue;
@@ -287,7 +265,6 @@ b32 config_parse(mem_arena* arena, const char* filename, ml_config* out_config) 
 
             fprintf(stderr, "Warning: Unknown dataset key at line %u: %s\n", line_num, line);
         } else if (current_section == 2) {
-            // Training section
             if (parse_uint(line, "epochs", &out_config->training.epochs)) {
                 continue;
             }
@@ -312,14 +289,11 @@ b32 config_parse(mem_arena* arena, const char* filename, ml_config* out_config) 
 
             fprintf(stderr, "Warning: Unknown training key at line %u: %s\n", line_num, line);
         } else if (current_section == 3) {
-            // Architecture section
             if (strncmp(&line[pos], "layer", 5) == 0) {
                 layer_spec spec;
                 if (parse_layer_spec(line, &spec)) {
-                    // Allocate layer array on first layer
+                    // Lazy allocate on first layer (fixed size for simplicity)
                     if (layer_count == 0) {
-                        // Count total layers first - do a second pass
-                        // For now, allocate a reasonable max (50 layers)
                         out_config->architecture.layers = PUSH_ARRAY(arena, layer_spec, 50);
                         if (out_config->architecture.layers == NULL) {
                             fprintf(stderr, "Error: Failed to allocate layer array\n");
@@ -349,7 +323,6 @@ b32 config_parse(mem_arena* arena, const char* filename, ml_config* out_config) 
 
     fclose(file);
 
-    // Validation
     if (out_config->dataset.train_size == 0) {
         fprintf(stderr, "Error: train_size not specified in config\n");
         return 0;

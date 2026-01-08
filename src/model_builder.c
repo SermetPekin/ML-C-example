@@ -17,7 +17,6 @@ model_var* model_build_dense_layer(
 
     u32 input_size = input->val->rows;
 
-    // Create weight matrix W (output_size x input_size)
     model_var* W = mv_create(arena, model, output_size, input_size,
                             MV_FLAG_REQUIRES_GRAD | MV_FLAG_PARAMETER);
     if (W == NULL) {
@@ -25,7 +24,6 @@ model_var* model_build_dense_layer(
         return NULL;
     }
 
-    // Create bias vector b (output_size x 1)
     model_var* b = mv_create(arena, model, output_size, 1,
                             MV_FLAG_REQUIRES_GRAD | MV_FLAG_PARAMETER);
     if (b == NULL) {
@@ -33,12 +31,11 @@ model_var* model_build_dense_layer(
         return NULL;
     }
 
-    // Xavier initialization: uniform(-sqrt(6/(in+out)), sqrt(6/(in+out)))
+    // Xavier initialization
     f32 bound = sqrtf(6.0f / (input_size + output_size));
     mat_fill_rand(W->val, -bound, bound);
     mat_fill_rand(b->val, -bound, bound);
 
-    // Build computation graph: z = W @ input + b
     model_var* z_matmul = mv_matmul(arena, model, W, input, 0);
     if (z_matmul == NULL) {
         fprintf(stderr, "Error: Failed to create matmul operation\n");
@@ -51,7 +48,6 @@ model_var* model_build_dense_layer(
         return NULL;
     }
 
-    // Apply activation function
     model_var* output = NULL;
 
     if (activation == ACTIVATION_RELU) {
@@ -59,7 +55,7 @@ model_var* model_build_dense_layer(
     } else if (activation == ACTIVATION_SOFTMAX) {
         output = mv_softmax(arena, model, z, 0);
     } else if (activation == ACTIVATION_NONE) {
-        output = z;  // No activation
+        output = z;
     } else {
         fprintf(stderr, "Error: Unknown activation type %d\n", activation);
         return NULL;
@@ -82,7 +78,7 @@ model_var* model_build_residual_layer(
 
     u32 input_size = input->val->rows;
 
-    // For residual connection, input and output must have same dimension
+    // Residual requires matching dims for skip connection
     if (input_size != hidden_size) {
         fprintf(stderr,
             "Error: Residual layer requires matching input/hidden sizes (%u != %u)\n",
@@ -90,7 +86,6 @@ model_var* model_build_residual_layer(
         return NULL;
     }
 
-    // Create weight matrix W (hidden_size x input_size)
     model_var* W = mv_create(arena, model, hidden_size, input_size,
                             MV_FLAG_REQUIRES_GRAD | MV_FLAG_PARAMETER);
     if (W == NULL) {
@@ -98,7 +93,6 @@ model_var* model_build_residual_layer(
         return NULL;
     }
 
-    // Create bias vector b (hidden_size x 1)
     model_var* b = mv_create(arena, model, hidden_size, 1,
                             MV_FLAG_REQUIRES_GRAD | MV_FLAG_PARAMETER);
     if (b == NULL) {
@@ -111,7 +105,6 @@ model_var* model_build_residual_layer(
     mat_fill_rand(W->val, -bound, bound);
     mat_fill_rand(b->val, -bound, bound);
 
-    // Build computation graph: z = W @ input + b
     model_var* z_matmul = mv_matmul(arena, model, W, input, 0);
     if (z_matmul == NULL) {
         fprintf(stderr, "Error: Failed to create matmul in residual layer\n");
@@ -124,7 +117,6 @@ model_var* model_build_residual_layer(
         return NULL;
     }
 
-    // Apply activation
     model_var* activated = NULL;
 
     if (activation == ACTIVATION_RELU) {
@@ -138,7 +130,7 @@ model_var* model_build_residual_layer(
         return NULL;
     }
 
-    // Add residual connection: output = input + activated
+    // Skip connection: add input to activated output
     model_var* output = mv_add(arena, model, input, activated, 0);
     if (output == NULL) {
         fprintf(stderr, "Error: Failed to create residual connection\n");
@@ -165,7 +157,6 @@ b32 model_build_from_config(
         return 0;
     }
 
-    // Create input node
     model_var* input = mv_create(arena, model, input_size, 1, MV_FLAG_INPUT);
     if (input == NULL) {
         fprintf(stderr, "Error: Failed to create input node\n");
@@ -174,13 +165,12 @@ b32 model_build_from_config(
 
     model->input = input;
 
-    // Build layers
     model_var* current = input;
 
     for (u32 i = 0; i < arch->num_layers; i++) {
         const layer_spec* layer = &arch->layers[i];
 
-        // Verify layer input size matches current output
+        // Ensure layer input matches previous layer output
         u32 expected_input_size = (i == 0) ? input_size : arch->layers[i - 1].output_size;
 
         if (layer->input_size != expected_input_size) {
@@ -211,7 +201,7 @@ b32 model_build_from_config(
         current = layer_output;
     }
 
-    // Verify final layer output matches expected output size
+    // Final layer output must match model output size
     if (arch->layers[arch->num_layers - 1].output_size != output_size) {
         fprintf(stderr,
             "Error: Final layer output %u does not match expected output_size %u\n",
@@ -219,18 +209,15 @@ b32 model_build_from_config(
         return 0;
     }
 
-    // Set output node (mark with flag)
     model->output = mv_create(arena, model, output_size, 1, MV_FLAG_OUTPUT);
     if (model->output == NULL) {
         fprintf(stderr, "Error: Failed to create output node\n");
         return 0;
     }
 
-    // The actual output comes from the last layer
-    // We'll use current as the prediction output
-    model->output->val = current->val;  // Share the value matrix
+    // Share output matrix from last layer
+    model->output->val = current->val;
 
-    // Create desired output node for labels
     model_var* y = mv_create(arena, model, output_size, 1, MV_FLAG_DESIRED_OUTPUT);
     if (y == NULL) {
         fprintf(stderr, "Error: Failed to create desired output node\n");
@@ -239,7 +226,6 @@ b32 model_build_from_config(
 
     model->desired_output = y;
 
-    // Create cost node (cross-entropy loss)
     model_var* cost = mv_cross_entropy(arena, model, y, current, MV_FLAG_COST);
     if (cost == NULL) {
         fprintf(stderr, "Error: Failed to create cost node\n");

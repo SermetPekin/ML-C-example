@@ -26,7 +26,7 @@ matrix* mat_load(mem_arena* arena, u32 rows, u32 cols, const char* filename) {
 
     matrix* mat = mat_create(arena, rows, cols);
 
-    // Get file size
+    // Determine file size
     if (fseek(f, 0, SEEK_END) != 0) {
         fclose(f);
         return NULL;
@@ -43,7 +43,6 @@ matrix* mat_load(mem_arena* arena, u32 rows, u32 cols, const char* filename) {
         return NULL;
     }
 
-    // Read data
     u64 expected_size = sizeof(f32) * (u64)rows * cols;
     u64 read_size = MIN((u64)file_size, expected_size);
 

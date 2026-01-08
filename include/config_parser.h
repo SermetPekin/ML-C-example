@@ -22,7 +22,6 @@ typedef enum {
     OPTIMIZER_ADAM
 } optimizer_type;
 
-// Configuration structures
 typedef struct {
     char train_images_path[256];
     char train_labels_path[256];

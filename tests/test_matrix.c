@@ -8,8 +8,7 @@
 int main(void) {
     TEST_SUITE("Matrix Operations Tests");
 
-    // Create arena for test allocations
-    mem_arena* arena = arena_create(256 * 1024 * 1024, 8 * 1024 * 1024); // 256 MB reserve, 8 MB commit
+    mem_arena* arena = arena_create(256 * 1024 * 1024, 8 * 1024 * 1024);
 
     // Test 1: Matrix creation and basic properties
     {
@@ -94,18 +93,13 @@ int main(void) {
         matrix* b = mat_create(arena, 2, 2);
         matrix* c = mat_create(arena, 2, 2);
 
-        // a = [[1, 2], [3, 4]]
         a->data[0] = 1.0f; a->data[1] = 2.0f;
         a->data[2] = 3.0f; a->data[3] = 4.0f;
 
-        // b = [[5, 6], [7, 8]]
         b->data[0] = 5.0f; b->data[1] = 6.0f;
         b->data[2] = 7.0f; b->data[3] = 8.0f;
 
         mat_mul(c, a, b, true, false, false);
-
-        // c should be [[1*5+2*7, 1*6+2*8], [3*5+4*7, 3*6+4*8]]
-        // = [[19, 22], [43, 50]]
         ASSERT_FLOAT_EQ(c->data[0], 19.0f, 1e-5f);
         ASSERT_FLOAT_EQ(c->data[1], 22.0f, 1e-5f);
         ASSERT_FLOAT_EQ(c->data[2], 43.0f, 1e-5f);

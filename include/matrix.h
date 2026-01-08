@@ -6,16 +6,13 @@
 
 typedef struct {
     u32 rows, cols;
-    // Row-major
-    f32* data;
+    f32* data;  // Row-major layout
 } matrix;
 
-// Matrix creation and lifecycle
 matrix* mat_create(mem_arena* arena, u32 rows, u32 cols);
 matrix* mat_load(mem_arena* arena, u32 rows, u32 cols, const char* filename);
 b32 mat_copy(matrix* dst, matrix* src);
 
-// Matrix operations
 void mat_clear(matrix* mat);
 void mat_fill(matrix* mat, f32 x);
 void mat_fill_rand(matrix* mat, f32 lower, f32 upper);
@@ -23,7 +20,6 @@ void mat_scale(matrix* mat, f32 scale);
 f32 mat_sum(matrix* mat);
 u64 mat_argmax(matrix* mat);
 
-// Matrix arithmetic
 b32 mat_add(matrix* out, const matrix* a, const matrix* b);
 b32 mat_sub(matrix* out, const matrix* a, const matrix* b);
 b32 mat_mul(
@@ -31,12 +27,10 @@ b32 mat_mul(
     b8 zero_out, b8 transpose_a, b8 transpose_b
 );
 
-// Activation and loss functions
 b32 mat_relu(matrix* out, const matrix* in);
 b32 mat_softmax(matrix* out, const matrix* in);
 b32 mat_cross_entropy(matrix* out, const matrix* p, const matrix* q);
 
-// Gradient operations
 b32 mat_relu_add_grad(matrix* out, const matrix* in, const matrix* grad);
 b32 mat_softmax_add_grad(
     matrix* out, const matrix* softmax_out, const matrix* grad

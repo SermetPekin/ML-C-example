@@ -6,7 +6,6 @@
 #define MODEL_MAGIC 0x4D4C4E4E
 #define MODEL_VERSION 1
 
-// Helper to count parameters in a model
 static u32 _count_parameters(const model_context* model) {
     u32 count = 0;
     for (u32 i = 0; i < model->cost_prog.size; i++) {
@@ -30,7 +29,6 @@ b32 model_save(const model_context* model, const char* filename) {
         return 0;
     }
 
-    // Count parameters
     u32 num_params = _count_parameters(model);
     if (num_params == 0) {
         fprintf(stderr, "Error: Model has no parameters to save\n");
@@ -38,7 +36,6 @@ b32 model_save(const model_context* model, const char* filename) {
         return 0;
     }
 
-    // Write header
     model_file_header header = {
         .magic = MODEL_MAGIC,
         .version = MODEL_VERSION,
@@ -52,7 +49,7 @@ b32 model_save(const model_context* model, const char* filename) {
         return 0;
     }
 
-    // Collect parameter metadata
+    // Collect dims for each parameter
     parameter_metadata* metadata = malloc(num_params * sizeof(parameter_metadata));
     if (metadata == NULL) {
         fprintf(stderr, "Error: Failed to allocate metadata array\n");
@@ -70,7 +67,6 @@ b32 model_save(const model_context* model, const char* filename) {
         }
     }
 
-    // Write metadata
     if (fwrite(metadata, sizeof(parameter_metadata), num_params, f) != num_params) {
         fprintf(stderr, "Error: Failed to write parameter metadata\n");
         free(metadata);
@@ -78,7 +74,6 @@ b32 model_save(const model_context* model, const char* filename) {
         return 0;
     }
 
-    // Write parameter data
     for (u32 i = 0; i < model->cost_prog.size; i++) {
         model_var* var = model->cost_prog.vars[i];
         if (mv_is_parameter(var)) {
@@ -111,7 +106,6 @@ b32 model_load(model_context* model, const char* filename) {
         return 0;
     }
 
-    // Read header
     model_file_header header;
     if (fread(&header, sizeof(model_file_header), 1, f) != 1) {
         fprintf(stderr, "Error: Failed to read header\n");
@@ -119,7 +113,6 @@ b32 model_load(model_context* model, const char* filename) {
         return 0;
     }
 
-    // Validate header
     if (header.magic != MODEL_MAGIC) {
         fprintf(stderr, "Error: Invalid model file (bad magic number)\n");
         fclose(f);
@@ -133,7 +126,6 @@ b32 model_load(model_context* model, const char* filename) {
         return 0;
     }
 
-    // Read metadata
     parameter_metadata* metadata = malloc(header.num_parameters * sizeof(parameter_metadata));
     if (metadata == NULL) {
         fprintf(stderr, "Error: Failed to allocate metadata array\n");
@@ -148,7 +140,7 @@ b32 model_load(model_context* model, const char* filename) {
         return 0;
     }
 
-    // Count model parameters and validate
+    // Verify file has same params as current model
     u32 model_num_params = _count_parameters(model);
     if (model_num_params != header.num_parameters) {
         fprintf(stderr, "Error: Model parameter count mismatch (file: %u, model: %u)\n",
@@ -158,12 +150,10 @@ b32 model_load(model_context* model, const char* filename) {
         return 0;
     }
 
-    // Load parameter data
     u32 param_idx = 0;
     for (u32 i = 0; i < model->cost_prog.size && param_idx < header.num_parameters; i++) {
         model_var* var = model->cost_prog.vars[i];
         if (mv_is_parameter(var)) {
-            // Validate dimensions
             if (var->val->rows != metadata[param_idx].rows ||
                 var->val->cols != metadata[param_idx].cols) {
                 fprintf(stderr, "Error: Dimension mismatch for parameter %u\n", param_idx);
@@ -175,7 +165,6 @@ b32 model_load(model_context* model, const char* filename) {
                 return 0;
             }
 
-            // Load data
             u32 total_elements = var->val->rows * var->val->cols;
             if (fread(var->val->data, sizeof(f32), total_elements, f) != total_elements) {
                 fprintf(stderr, "Error: Failed to read parameter data for parameter %u\n", param_idx);
