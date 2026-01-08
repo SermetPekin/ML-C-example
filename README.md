@@ -2,7 +2,7 @@
 
 # Machine Learning in C
 
-A generic neural network framework in pure C. Configure the architecture and data paths via a simple text config file, compile once, run on any dataset. No dependencies beyond standard C—all matrix operations, training, and memory management built from scratch.
+A neural network framework in C. Configure the architecture and data paths in a text config file, compile once, run on any dataset. No dependencies beyond standard C—all matrix operations, training, and memory management built from scratch.
 
 ## Setup
 
@@ -44,7 +44,7 @@ make run CONFIG=examples/mnist_config.txt
 
 ## Features
 
-- **Config-driven architecture**: Define network topology without changing code
+- **Config-driven architecture**: Change the network structure without modifying code
 - **Multiple optimizers**: Support for SGD and Adam optimizers with configurable hyperparameters
 - **Multiple label formats**: Auto-detects or accepts integer indices, one-hot, raw floats
 - **Generic training**: Same binary works with any dataset—change config, not code
@@ -62,7 +62,7 @@ learning_rate = 0.01
 ```
 
 ### Adam
-Adam combines the benefits of adaptive learning rates with momentum. Use it with the following hyperparameters:
+Uses adaptive learning rates with momentum. Configure with these hyperparameters:
 ```
 [training]
 optimizer = adam
@@ -90,4 +90,3 @@ Based on [Magicalbat](https://github.com/Magicalbat)'s implementation. Major enh
 - Config-driven architecture (no code changes needed for different networks)
 - Multi-format label support (integer indices, one-hot, raw floats)
 - Multiple optimization algorithms (SGD and Adam)
-- Comprehensive testing infrastructure

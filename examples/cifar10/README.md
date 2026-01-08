@@ -42,7 +42,7 @@ This example includes configurations for two optimizers:
 - **SGD** (`config.txt`) - Stochastic Gradient Descent with learning rate 0.001
 - **Adam** (`cifar10_adam.txt`) - Adaptive Moment Estimation with learning rate 0.0005
 
-Adam typically converges faster than SGD but may explore different solution paths. Compare their performance and convergence behavior.
+Adam usually converges faster than SGD but may find different solutions. Run both and compare results.
 
 ## Why Lower Accuracy?
 
@@ -50,7 +50,7 @@ CIFAR-10 images have complex spatial structure. Fully-connected networks struggl
 - Images have local patterns (edges, textures) that **convolutional layers** capture better
 - Modern models (CNNs) achieve 95%+ with specialized architecture
 
-This is a baseline, not a weakness of the framework!
+This is a limitation of fully-connected networks, not the implementation.
 
 ## How to Improve
 

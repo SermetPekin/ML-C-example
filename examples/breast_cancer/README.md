@@ -37,7 +37,7 @@ Test Completed. Accuracy: 111 / 114 (97.4%), Average Cost: 0.1567
 
 ## Real-World Application
 
-This dataset contains actual medical diagnostic data. The model learns to classify tumors as benign or malignant based on cell measurements—a practical classification problem.
+This dataset contains cell measurements used to classify tumors as benign or malignant.
 
 ## Optimizers
 

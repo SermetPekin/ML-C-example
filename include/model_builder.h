@@ -5,8 +5,7 @@
 #include "config_parser.h"
 #include "utils/arena.h"
 
-// Build model from architecture specification
-// Automatically sets model->input, model->output, model->desired_output, model->cost
+// Build model layers from config and set input/output variables
 // Returns true on success, false on error
 b32 model_build_from_config(
     mem_arena* arena,
@@ -16,9 +15,7 @@ b32 model_build_from_config(
     u32 output_size
 );
 
-// Helper: Create a dense layer
-// Applies: z = W @ input + b, then activation(z)
-// Returns the output variable
+// Create a dense layer: output = activation(W @ input + b)
 model_var* model_build_dense_layer(
     mem_arena* arena,
     model_context* model,
