@@ -10,21 +10,21 @@ label_format_type label_detect_format(
         return LABEL_FORMAT_AUTO;
     }
 
-    // Check if single column (likely integer indices)
+    // Single column (likely integer indices)
     if (labels->cols == 1) {
-        // Verify all values are integers in valid range
+        // Verify integer values in valid range
         b32 all_integers = 1;
         b32 all_valid_range = 1;
 
         for (u32 i = 0; i < labels->rows; i++) {
             f32 val = labels->data[i];
 
-            // Check if integer (within floating point precision)
+            // Check if integer (FP precision)
             if (fabsf(val - roundf(val)) > 1e-6f) {
                 all_integers = 0;
             }
 
-            // Check if in valid class range
+            // Verify valid class range
             u32 idx = (u32)roundf(val);
             if (idx >= num_classes) {
                 all_valid_range = 0;
@@ -36,7 +36,7 @@ label_format_type label_detect_format(
         }
     }
 
-    // Check if one-hot encoded (num_classes columns with 0/1 values)
+    // Check for one-hot encoding
     if (labels->cols == num_classes) {
         b32 all_binary = 1;
 
@@ -53,7 +53,7 @@ label_format_type label_detect_format(
         }
     }
 
-    // Default to raw floats (any other format)
+    // Default to raw floats
     return LABEL_FORMAT_RAW_FLOATS;
 }
 
@@ -68,13 +68,13 @@ matrix* label_convert_to_onehot(
         return NULL;
     }
 
-    // If already one-hot, just return it
+    // Return if already one-hot
     if (format == LABEL_FORMAT_ONE_HOT ||
         (format == LABEL_FORMAT_AUTO && labels->cols == num_classes)) {
         return (matrix*)labels;  // Cast away const since caller needs mutable
     }
 
-    // If integer indices, convert to one-hot
+    // Convert integer indices to one-hot
     if (format == LABEL_FORMAT_INTEGER_INDICES ||
         (format == LABEL_FORMAT_AUTO && labels->cols == 1)) {
 
@@ -84,12 +84,12 @@ matrix* label_convert_to_onehot(
             return NULL;
         }
 
-        // Initialize to all zeros
+        // Zero initialize
         for (u32 i = 0; i < onehot->rows * onehot->cols; i++) {
             onehot->data[i] = 0.0f;
         }
 
-        // Set appropriate one-hot entries
+        // Set one-hot entries
         for (u32 i = 0; i < labels->rows; i++) {
             u32 class_idx = (u32)roundf(labels->data[i]);
 
@@ -106,8 +106,7 @@ matrix* label_convert_to_onehot(
         return onehot;
     }
 
-    // For raw floats or unknown format, return as-is
-    // (assumes matrix already has correct dimensions)
+    // Return as-is for raw floats (assumes correct dims)
     if (labels->cols == num_classes) {
         return (matrix*)labels;
     }
@@ -129,7 +128,7 @@ b32 label_validate(
     }
 
     if (format == LABEL_FORMAT_INTEGER_INDICES) {
-        // Single column with integer values in [0, num_classes)
+        // Integer indices: single column [0, num_classes)
         if (labels->cols != 1) {
             fprintf(stderr,
                 "Error: integer_indices format expects 1 column, got %u\n",
@@ -153,7 +152,7 @@ b32 label_validate(
     }
 
     if (format == LABEL_FORMAT_ONE_HOT) {
-        // num_classes columns with 0/1 values
+        // One-hot: num_classes columns with 0/1
         if (labels->cols != num_classes) {
             fprintf(stderr,
                 "Error: one_hot format expects %u columns, got %u\n",
@@ -161,7 +160,7 @@ b32 label_validate(
             return 0;
         }
 
-        // Verify each row has exactly one 1
+        // Each row must have exactly one 1
         for (u32 i = 0; i < labels->rows; i++) {
             u32 ones_count = 0;
             for (u32 j = 0; j < labels->cols; j++) {
@@ -188,7 +187,7 @@ b32 label_validate(
     }
 
     if (format == LABEL_FORMAT_RAW_FLOATS) {
-        // Just verify dimensions match
+        // Verify dimension match
         if (labels->cols != num_classes) {
             fprintf(stderr,
                 "Error: raw_floats format expects %u columns, got %u\n",
