@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 #include "config_parser.h"
 #include "model_builder.h"
@@ -9,6 +10,7 @@
 #include "model.h"
 #include "matrix.h"
 #include "utils/arena.h"
+#include "eval_metrics.h"
 
 int main(int argc, char** argv) {
     const char* config_file = (argc > 1) ? argv[1] : "model_config.txt";
@@ -147,20 +149,36 @@ int main(int argc, char** argv) {
 
     model_train(model, &training_desc);
 
-    // Forward pass after training
-    memcpy(model->input->val->data, test_images->data,
-           sizeof(f32) * config.dataset.input_size);
+    // Evaluate on test set
+    evaluation_result* eval_result = model_evaluate(
+        perm_arena,
+        model,
+        test_images,
+        test_labels,
+        config.dataset.output_size
+    );
 
-    if (!model_feedforward(model)) {
-        fprintf(stderr, "Error: Post-training feedforward failed.\n");
+    if (eval_result == NULL) {
+        fprintf(stderr, "Error: Model evaluation failed.\n");
         return 1;
     }
 
-    printf("Post-training output: ");
-    for (u32 i = 0; i < config.dataset.output_size; i++) {
-        printf("%f ", model->output->val->data[i]);
+    // Print results to console
+    eval_print_results(eval_result);
+
+    // Save results to file with timestamp
+    char results_filename[256];
+    time_t now = time(NULL);
+    struct tm* timeinfo = localtime(&now);
+    strftime(results_filename, sizeof(results_filename),
+             "results_%Y%m%d_%H%M%S.txt", timeinfo);
+
+    if (!eval_save_results(eval_result, results_filename)) {
+        fprintf(stderr, "Error: Failed to save results to file.\n");
+        return 1;
     }
-    printf("\n\n");
+
+    printf("Results saved to: %s\n", results_filename);
 
     arena_destroy(perm_arena);
 

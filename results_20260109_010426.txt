@@ -1,0 +1,22 @@
+=====================================
+             EVALUATION RESULTS      
+=====================================
+
+Overall Accuracy: 95.61%
+Average Loss: 0.094283
+
+Class      Precision    Recall       F1-Score     Support 
+-----      ---------    ------       --------     ------- 
+0          0.9111       0.9762       0.9425       42      
+1          0.9855       0.9444       0.9645       72      
+
+Confusion Matrix:
+(rows=actual, cols=predicted)
+
+Actual\Pred       0       1
+--------------------------
+0               41       1
+1                4      68
+
+=====================================
+

@@ -5,10 +5,10 @@
 
 [dataset]
 # Data file paths (generate using Python sklearn or download from UCI)
-train_images = examples/breast_cancer_train_features.mat
-train_labels = examples/breast_cancer_train_labels.mat
-test_images = examples/breast_cancer_test_features.mat
-test_labels = examples/breast_cancer_test_labels.mat
+train_images = examples/breast_cancer/data/breast_cancer_train_features.mat
+train_labels = examples/breast_cancer/data/breast_cancer_train_labels.mat
+test_images = examples/breast_cancer/data/breast_cancer_test_features.mat
+test_labels = examples/breast_cancer/data/breast_cancer_test_labels.mat
 
 # Dataset dimensions
 train_size = 455          # ~80% of 569 samples for training

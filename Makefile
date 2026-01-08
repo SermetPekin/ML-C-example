@@ -17,7 +17,7 @@ TEST_BUILD_DIR := $(BIN_DIR)/tests
 # Source files
 SOURCES := $(SRC_DIR)/main.c $(SRC_DIR)/matrix.c $(SRC_DIR)/model.c \
            $(SRC_DIR)/config_parser.c $(SRC_DIR)/model_builder.c $(SRC_DIR)/label_utils.c \
-           $(SRC_DIR)/persistence.c $(SRC_DIR)/utils/arena.c $(SRC_DIR)/utils/prng.c
+           $(SRC_DIR)/persistence.c $(SRC_DIR)/eval_metrics.c $(SRC_DIR)/utils/arena.c $(SRC_DIR)/utils/prng.c
 OBJECTS := $(SOURCES:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 TARGET := $(BIN_DIR)/ml_trainer
 
