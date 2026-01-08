@@ -28,6 +28,7 @@ num_classes = 10
 epochs = 30
 batch_size = 32
 learning_rate = 0.01
+optimizer = sgd          # or 'adam'
 
 [architecture]
 dense 128 relu
@@ -44,9 +45,34 @@ make run CONFIG=examples/mnist_config.txt
 ## Features
 
 - **Config-driven architecture**: Define network topology without changing code
+- **Multiple optimizers**: Support for SGD and Adam optimizers with configurable hyperparameters
 - **Multiple label formats**: Auto-detects or accepts integer indices, one-hot, raw floats
 - **Generic training**: Same binary works with any dataset—change config, not code
 - **Validated datasets**: Tested on Iris, Breast Cancer, MNIST, CIFAR-10
+
+## Optimizers
+
+The framework supports multiple optimization algorithms. Configure your choice in the `[training]` section:
+
+### SGD (Stochastic Gradient Descent)
+```
+[training]
+optimizer = sgd
+learning_rate = 0.01
+```
+
+### Adam
+Adam combines the benefits of adaptive learning rates with momentum. Use it with the following hyperparameters:
+```
+[training]
+optimizer = adam
+learning_rate = 0.001        # Adam typically uses smaller learning rates
+adam_beta1 = 0.9             # Decay rate for 1st moment estimate
+adam_beta2 = 0.999           # Decay rate for 2nd moment estimate
+adam_epsilon = 1e-8          # Numerical stability constant
+```
+
+See `examples/mnist/mnist_adam.txt` for a complete Adam configuration example.
 
 ## Tests
 
@@ -59,4 +85,9 @@ make test_prng         # Random number generation
 
 ## Notes
 
-Fork of [Magicalbat](https://github.com/Magicalbat)'s implementation. Decoupled from MNIST-specific code, added config-driven architecture, multi-format label support, and comprehensive testing infrastructure.
+Based on [Magicalbat](https://github.com/Magicalbat)'s implementation. Major enhancements include:
+- Decoupled from MNIST-specific code for generic dataset support
+- Config-driven architecture (no code changes needed for different networks)
+- Multi-format label support (integer indices, one-hot, raw floats)
+- Multiple optimization algorithms (SGD and Adam)
+- Comprehensive testing infrastructure
