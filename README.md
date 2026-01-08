@@ -2,98 +2,61 @@
 
 # Machine Learning in C
 
-A machine learning project written in C, featuring neural network implementations and utilities for working with the MNIST dataset.
+A generic neural network framework in pure C. Configure the architecture and data paths via YAML, compile once, run on any dataset. No dependencies beyond standard C—all matrix operations, training, and memory management built from scratch.
 
-## Getting Started
+## Setup
 
-### Prerequisites
-
-Make sure you have Python and pip installed on your system.
-
-### Installation
-
-1. **Install the `uv` package manager** (faster Python package management):
-   ```bash
-   python -m pip install uv
-   ```
-
-2. **Create and activate a virtual environment**:
-   ```bash
-   uv venv
-   ```
-
-   Then activate it:
-   - **Linux/macOS**:
-     ```bash
-     source .venv/bin/activate
-     ```
-   - **Windows**:
-     ```bash
-     .venv\Scripts\activate
-     ```
-
-3. **Install dependencies**:
-   ```bash
-   python -m ensurepip
-   python -m pip install -r requirements.txt
-   ```
-
-### Preparing the Dataset
-
-To download and prepare the MNIST dataset:
 ```bash
-python mnist.py
+python -m pip install uv
+uv venv
+source .venv/bin/activate  # or .venv\Scripts\activate on Windows
+python -m pip install -r requirements.txt
+python mnist.py            # Prepare a dataset
 ```
 
-This will download the MNIST dataset and convert it to binary format files for use with the C implementation.
+## Usage
 
-### Building and Running
+Define your network in a config file (see `examples/mnist_config.txt`):
 
-**Build the MNIST trainer**:
-```bash
-make
+```
+[dataset]
+input_size = 784
+output_size = 10
+num_classes = 10
+
+[training]
+epochs = 30
+batch_size = 32
+learning_rate = 0.01
+
+[architecture]
+dense 128 relu
+dense 10 softmax
 ```
 
-**Run the trainer**:
+Then compile and run with that config:
+
 ```bash
-make run
+make CONFIG=examples/mnist_config.txt
+make run CONFIG=examples/mnist_config.txt
 ```
 
-This will train the neural network on the MNIST dataset and evaluate it on the test set.
+## Features
 
-## Testing
+- **Config-driven architecture**: Define network topology without changing code
+- **Multiple label formats**: Auto-detects or accepts integer indices, one-hot, raw floats
+- **Generic training**: Same binary works with any dataset—change config, not code
+- **Validated datasets**: Tested on Iris, Breast Cancer, MNIST, CIFAR-10
 
-The project includes comprehensive unit tests for all core modules.
+## Tests
 
-### Running Tests
-
-Run all tests:
 ```bash
-make test
+make test              # Run all tests
+make test_matrix       # Matrix operations
+make test_arena        # Memory allocator
+make test_prng         # Random number generation
 ```
 
-Run individual test suites:
-```bash
-make test_matrix    # Matrix operations tests
-make test_arena     # Memory arena allocator tests
-make test_prng      # Pseudo-random number generator tests
-```
+## Notes
 
-### Test Coverage
-
-- **Matrix Operations** (`test_matrix`): Tests for creation, arithmetic, activation functions, and basic operations
-- **Arena Allocator** (`test_arena`): Tests for memory allocation, deallocation, and temporary arena functionality
-- **PRNG** (`test_prng`): Tests for random number generation and value distribution
-
-
-## Development Notes
-
-This is a fork of a machine learning framework originally created by [Magicalbat](https://github.com/Magicalbat). The original implementation provided solid foundational work on neural networks, matrix operations, and memory management in C. This fork reorganizes and improves the project with better testing infrastructure and development tooling.
-
-### Improvements Made
-
-- **Code reorganization**: Restructured from a flat file layout to a proper `include/` and `src/` directory hierarchy, moving each component (matrix, model, MNIST utilities) into its own module for better maintainability.
-
-- **Added comprehensive tests**: Built test suites for matrix operations, arena memory allocator, and PRNG to catch regressions and verify correctness during development.
-
-- **Development infrastructure**: Added GitHub Actions for CI/CD, requirements.txt for Python dependencies, detailed README for environment setup, and file checks (linting, formatting) to maintain code quality.
+Fork of [Magicalbat](https://github.com/Magicalbat)'s implementation. Decoupled from MNIST-specific code, added config-driven architecture, multi-format label support, and comprehensive testing infrastructure.
