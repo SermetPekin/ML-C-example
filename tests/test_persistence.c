@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include "utils/base.h"
 #include "utils/arena.h"
 #include "matrix.h"
@@ -149,7 +148,7 @@ int main(void) {
     }
 
     // Clean up test file
-    unlink(test_file);
+    remove(test_file);
 
     PRINT_RESULTS();
 }
