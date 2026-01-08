@@ -17,6 +17,11 @@ typedef enum {
     ACTIVATION_SOFTMAX
 } activation_type;
 
+typedef enum {
+    OPTIMIZER_SGD,
+    OPTIMIZER_ADAM
+} optimizer_type;
+
 // Configuration structures
 typedef struct {
     char train_images_path[256];
@@ -34,6 +39,10 @@ typedef struct {
     u32 epochs;
     u32 batch_size;
     f32 learning_rate;
+    optimizer_type optimizer;
+    f32 adam_beta1;
+    f32 adam_beta2;
+    f32 adam_epsilon;
 } training_config;
 
 typedef struct {

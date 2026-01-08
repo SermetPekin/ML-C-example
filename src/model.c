@@ -394,6 +394,93 @@ b32 model_feedforward(model_context* model) {
     return true;
 }
 
+// Initialize Adam optimizer state for all parameters
+static void _adam_init(mem_arena* arena, model_context* model) {
+    for (u32 i = 0; i < model->cost_prog.size; i++) {
+        model_var* cur = model->cost_prog.vars[i];
+
+        if (!mv_is_parameter(cur)) {
+            continue;
+        }
+
+        cur->adam_m = mat_create(arena, cur->val->rows, cur->val->cols);
+        cur->adam_v = mat_create(arena, cur->val->rows, cur->val->cols);
+    }
+}
+
+// Perform SGD parameter update
+static void _update_params_sgd(
+    model_context* model,
+    const model_training_desc* training_desc
+) {
+    for (u32 i = 0; i < model->cost_prog.size; i++) {
+        model_var* cur = model->cost_prog.vars[i];
+
+        if (!mv_is_parameter(cur)) {
+            continue;
+        }
+
+        mat_scale(
+            cur->grad,
+            training_desc->learning_rate /
+            training_desc->batch_size
+        );
+        mat_sub(cur->val, cur->val, cur->grad);
+    }
+}
+
+// Perform Adam parameter update
+static void _update_params_adam(
+    model_context* model,
+    const model_training_desc* training_desc,
+    u32 step
+) {
+    f32 beta1 = training_desc->adam_beta1;
+    f32 beta2 = training_desc->adam_beta2;
+    f32 epsilon = training_desc->adam_epsilon;
+    f32 lr = training_desc->learning_rate;
+    f32 batch_size = (f32)training_desc->batch_size;
+
+    // Bias correction terms
+    f32 bias_correction1 = 1.0f - powf(beta1, (f32)step);
+    f32 bias_correction2 = 1.0f - powf(beta2, (f32)step);
+    f32 bias_correction = sqrtf(bias_correction2) / bias_correction1;
+
+    for (u32 i = 0; i < model->cost_prog.size; i++) {
+        model_var* cur = model->cost_prog.vars[i];
+
+        if (!mv_is_parameter(cur)) {
+            continue;
+        }
+
+        // Scale gradient by batch size
+        mat_scale(cur->grad, 1.0f / batch_size);
+
+        // Update biased first moment estimate: m = beta1 * m + (1 - beta1) * g
+        for (u32 j = 0; j < cur->grad->rows * cur->grad->cols; j++) {
+            cur->adam_m->data[j] =
+                beta1 * cur->adam_m->data[j] +
+                (1.0f - beta1) * cur->grad->data[j];
+        }
+
+        // Update biased second moment estimate: v = beta2 * v + (1 - beta2) * g^2
+        for (u32 j = 0; j < cur->grad->rows * cur->grad->cols; j++) {
+            f32 g = cur->grad->data[j];
+            cur->adam_v->data[j] =
+                beta2 * cur->adam_v->data[j] +
+                (1.0f - beta2) * g * g;
+        }
+
+        // Update parameters: param = param - lr * bias_correction * m / (sqrt(v) + eps)
+        for (u32 j = 0; j < cur->val->rows * cur->val->cols; j++) {
+            f32 m_hat = cur->adam_m->data[j];
+            f32 v_hat = cur->adam_v->data[j];
+            f32 update = lr * bias_correction * m_hat / (sqrtf(v_hat) + epsilon);
+            cur->val->data[j] -= update;
+        }
+    }
+}
+
 void model_train(
     model_context* model,
     const model_training_desc* training_desc
@@ -412,10 +499,17 @@ void model_train(
 
     mem_arena_temp scratch = arena_scratch_get(NULL, 0);
 
+    // Initialize Adam state if using Adam optimizer
+    if (training_desc->optimizer == OPTIMIZER_ADAM) {
+        _adam_init(scratch.arena, model);
+    }
+
     u32* training_order = PUSH_ARRAY_NZ(scratch.arena, u32, num_examples);
     for (u32 i = 0; i < num_examples; i++) {
         training_order[i] = i;
     }
+
+    u32 step_counter = 1;  // For Adam bias correction (1-indexed)
 
     for (u32 epoch = 0; epoch < training_desc->epochs; epoch++) {
         for (u32 i = 0; i < num_examples; i++) {
@@ -465,19 +559,12 @@ void model_train(
             }
             avg_cost /= (f32)training_desc->batch_size;
 
-            for (u32 i = 0; i < model->cost_prog.size; i++) {
-                model_var* cur = model->cost_prog.vars[i];
-
-                if (!mv_is_parameter(cur)) {
-                    continue;
-                }
-
-                mat_scale(
-                    cur->grad,
-                    training_desc->learning_rate /
-                    training_desc->batch_size
-                );
-                mat_sub(cur->val, cur->val, cur->grad);
+            // Update parameters using the selected optimizer
+            if (training_desc->optimizer == OPTIMIZER_SGD) {
+                _update_params_sgd(model, training_desc);
+            } else if (training_desc->optimizer == OPTIMIZER_ADAM) {
+                _update_params_adam(model, training_desc, step_counter);
+                step_counter++;
             }
 
             printf(

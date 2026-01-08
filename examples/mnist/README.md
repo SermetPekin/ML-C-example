@@ -19,6 +19,10 @@ cd ../..
 
 # 3. Quick test (from project root, 2 epochs ~1 minute)
 ./build/ml_trainer examples/mnist/config_quick.txt
+
+# 4. Adam opt
+./build/ml_trainer examples/mnist/mnist_adam.txt
+
 ```
 
 ## Data Location

@@ -13,9 +13,12 @@
 cd examples/cifar10
 python prepare.py
 
-# 2. Train model (from project root)
+# 2. Train model with SGD (from project root)
 cd ../..
 ./build/ml_trainer examples/cifar10/config.txt
+
+# 3. Train model with Adam optimizer
+./build/ml_trainer examples/cifar10/cifar10_adam.txt
 ```
 
 ## Data Location
@@ -31,6 +34,15 @@ Data files are automatically saved to `examples/cifar10/data/` directory:
 ```
 Test Completed. Accuracy: 6500 / 10000 (65%), Average Cost: 1.2345
 ```
+
+## Optimizers
+
+This example includes configurations for two optimizers:
+
+- **SGD** (`config.txt`) - Stochastic Gradient Descent with learning rate 0.001
+- **Adam** (`cifar10_adam.txt`) - Adaptive Moment Estimation with learning rate 0.0005
+
+Adam typically converges faster than SGD but may explore different solution paths. Compare their performance and convergence behavior.
 
 ## Why Lower Accuracy?
 

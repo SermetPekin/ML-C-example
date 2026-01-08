@@ -13,9 +13,12 @@
 cd examples/breast_cancer
 python prepare.py
 
-# 2. Train model (from project root)
+# 2. Train model with SGD (from project root)
 cd ../..
 ./build/ml_trainer examples/breast_cancer/config.txt
+
+# 3. Train model with Adam optimizer
+./build/ml_trainer examples/breast_cancer/breast_cancer_adam.txt
 ```
 
 ## Data Location
@@ -35,6 +38,15 @@ Test Completed. Accuracy: 111 / 114 (97.4%), Average Cost: 0.1567
 ## Real-World Application
 
 This dataset contains actual medical diagnostic data. The model learns to classify tumors as benign or malignant based on cell measurements—a practical classification problem.
+
+## Optimizers
+
+This example includes configurations for two optimizers:
+
+- **SGD** (`config.txt`) - Stochastic Gradient Descent with learning rate 0.01
+- **Adam** (`breast_cancer_adam.txt`) - Adaptive Moment Estimation with learning rate 0.001
+
+Compare their performance by running both and observing convergence speed and final accuracy.
 
 ## Experiments
 

@@ -2,10 +2,10 @@
 # Minimal epochs for testing
 
 [dataset]
-train_images = train_images.mat
-train_labels = train_labels.mat
-test_images = test_images.mat
-test_labels = test_labels.mat
+train_images = examples/mnist/data/mnist_train_images.mat
+train_labels = examples/mnist/data/mnist_train_labels.mat
+test_images = examples/mnist/data/mnist_test_images.mat
+test_labels = examples/mnist/data/mnist_test_labels.mat
 
 train_size = 60000
 test_size = 10000

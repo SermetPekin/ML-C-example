@@ -152,7 +152,11 @@ int main(int argc, char** argv) {
         .test_labels = test_labels,
         .epochs = config.training.epochs,
         .batch_size = config.training.batch_size,
-        .learning_rate = config.training.learning_rate
+        .learning_rate = config.training.learning_rate,
+        .optimizer = config.training.optimizer,
+        .adam_beta1 = config.training.adam_beta1,
+        .adam_beta2 = config.training.adam_beta2,
+        .adam_epsilon = config.training.adam_epsilon
     };
 
     model_train(model, &training_desc);

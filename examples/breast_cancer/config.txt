@@ -22,6 +22,7 @@ label_format = integer_indices  # Labels are 0 (benign) or 1 (malignant)
 epochs = 50
 batch_size = 32
 learning_rate = 0.01
+optimizer = sgd
 
 [architecture]
 # Simple feed-forward network for 30-dimensional input

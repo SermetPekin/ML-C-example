@@ -90,6 +90,25 @@ static b32 parse_float(const char* line, const char* key, f32* out_value) {
     return 1;
 }
 
+// Helper: Parse enum - optimizer type
+static b32 parse_optimizer_type(const char* line, const char* key, optimizer_type* out_optimizer) {
+    char value_str[64];
+    if (!parse_string(line, key, value_str, sizeof(value_str))) {
+        return 0;
+    }
+
+    if (strcmp(value_str, "sgd") == 0) {
+        *out_optimizer = OPTIMIZER_SGD;
+        return 1;
+    } else if (strcmp(value_str, "adam") == 0) {
+        *out_optimizer = OPTIMIZER_ADAM;
+        return 1;
+    } else {
+        fprintf(stderr, "Error: Unknown optimizer '%s'\n", value_str);
+        return 0;
+    }
+}
+
 // Helper: Parse enum - label format
 static b32 parse_label_format(const char* line, const char* key, label_format_type* out_format) {
     char value_str[64];
@@ -183,6 +202,10 @@ b32 config_parse(mem_arena* arena, const char* filename, ml_config* out_config) 
     out_config->training.epochs = 10;
     out_config->training.batch_size = 50;
     out_config->training.learning_rate = 0.01f;
+    out_config->training.optimizer = OPTIMIZER_SGD;
+    out_config->training.adam_beta1 = 0.9f;
+    out_config->training.adam_beta2 = 0.999f;
+    out_config->training.adam_epsilon = 1e-8f;
 
     FILE* file = fopen(filename, "r");
     if (file == NULL) {
@@ -272,6 +295,18 @@ b32 config_parse(mem_arena* arena, const char* filename, ml_config* out_config) 
                 continue;
             }
             if (parse_float(line, "learning_rate", &out_config->training.learning_rate)) {
+                continue;
+            }
+            if (parse_optimizer_type(line, "optimizer", &out_config->training.optimizer)) {
+                continue;
+            }
+            if (parse_float(line, "adam_beta1", &out_config->training.adam_beta1)) {
+                continue;
+            }
+            if (parse_float(line, "adam_beta2", &out_config->training.adam_beta2)) {
+                continue;
+            }
+            if (parse_float(line, "adam_epsilon", &out_config->training.adam_epsilon)) {
                 continue;
             }
 
@@ -390,6 +425,15 @@ void config_print(const ml_config* config) {
     printf("  epochs:       %u\n", config->training.epochs);
     printf("  batch_size:   %u\n", config->training.batch_size);
     printf("  learning_rate: %f\n", config->training.learning_rate);
+
+    const char* optimizer_str = (config->training.optimizer == OPTIMIZER_SGD) ? "sgd" : "adam";
+    printf("  optimizer:    %s\n", optimizer_str);
+
+    if (config->training.optimizer == OPTIMIZER_ADAM) {
+        printf("    beta1:      %f\n", config->training.adam_beta1);
+        printf("    beta2:      %f\n", config->training.adam_beta2);
+        printf("    epsilon:    %f\n", config->training.adam_epsilon);
+    }
 
     printf("\n[Architecture] (%u layers)\n", config->architecture.num_layers);
     for (u32 i = 0; i < config->architecture.num_layers; i++) {

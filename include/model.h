@@ -4,6 +4,7 @@
 #include "utils/base.h"
 #include "utils/arena.h"
 #include "matrix.h"
+#include "config_parser.h"
 
 typedef enum {
     MV_FLAG_NONE = 0,
@@ -42,6 +43,10 @@ typedef struct model_var {
 
     matrix* val;
     matrix* grad;
+
+    // Adam optimizer state (allocated only when using Adam)
+    matrix* adam_m;
+    matrix* adam_v;
 
     model_var_op op;
     struct model_var* inputs[MODEL_VAR_MAX_INPUTS];
@@ -98,6 +103,10 @@ typedef struct {
     u32 epochs;
     u32 batch_size;
     f32 learning_rate;
+    optimizer_type optimizer;
+    f32 adam_beta1;
+    f32 adam_beta2;
+    f32 adam_epsilon;
 } model_training_desc;
 
 // Variable operations

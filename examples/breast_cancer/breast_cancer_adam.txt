@@ -1,0 +1,41 @@
+# Breast Cancer Wisconsin (Diagnostic) Dataset Configuration - Adam Optimizer
+# This configuration shows how to use the Adam optimizer instead of SGD
+
+[dataset]
+# Data file paths (generate using Python sklearn or download from UCI)
+train_images = examples/breast_cancer/data/breast_cancer_train_features.mat
+train_labels = examples/breast_cancer/data/breast_cancer_train_labels.mat
+test_images = examples/breast_cancer/data/breast_cancer_test_features.mat
+test_labels = examples/breast_cancer/data/breast_cancer_test_labels.mat
+
+# Dataset dimensions
+train_size = 455          # ~80% of 569 samples for training
+test_size = 114           # ~20% of 569 samples for testing
+input_size = 30           # 30 diagnostic features
+output_size = 2           # 2 classes: Benign, Malignant
+label_format = integer_indices  # Labels are 0 (benign) or 1 (malignant)
+
+[training]
+# Training hyperparameters
+epochs = 50
+batch_size = 32
+# Adam typically uses smaller learning rates than SGD
+learning_rate = 0.001
+
+# Use Adam optimizer (options: sgd, adam)
+optimizer = adam
+
+# Adam hyperparameters (only used when optimizer = adam)
+adam_beta1 = 0.9        # Decay rate for 1st moment (usually 0.9)
+adam_beta2 = 0.999      # Decay rate for 2nd moment (usually 0.999)
+adam_epsilon = 1e-8     # Numerical stability constant
+
+[architecture]
+# Simple feed-forward network for 30-dimensional input
+# Input (30) -> Hidden (16) -> Output (2)
+
+# First hidden layer: 30 features -> 16 units with ReLU
+layer = dense 30 16 relu
+
+# Output layer: 16 units -> 2 classes with softmax
+layer = dense 16 2 softmax

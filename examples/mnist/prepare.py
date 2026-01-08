@@ -47,7 +47,7 @@ def main():
 
     try:
         # Download MNIST
-        mnist = fetch_openml('mnist_784', version=1, parser='auto')
+        mnist = fetch_openml('mnist_784', version=1, parser='liac-arff', as_frame=False)
         X, y = mnist.data, mnist.target
 
         print(f"Downloaded: {X.shape[0]} images, {X.shape[1]} features each")

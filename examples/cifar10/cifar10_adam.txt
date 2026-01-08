@@ -1,8 +1,5 @@
-# CIFAR-10 Image Classification Configuration
-# Multi-class classification: 10 object categories
-# Dataset: 60000 samples, 3072 features (32x32 RGB images flattened)
-# Categories: airplane, automobile, bird, cat, deer, dog, frog, horse, ship, truck
-# Download: https://www.cs.toronto.edu/~kriz/cifar.html
+# CIFAR-10 Image Classification Configuration - Adam Optimizer
+# This configuration shows how to use the Adam optimizer instead of SGD
 
 [dataset]
 # Data file paths (generate by flattening 32x32x3 images to 3072D vectors)
@@ -22,8 +19,16 @@ label_format = integer_indices  # Labels are 0-9
 # Training hyperparameters - more epochs for harder task
 epochs = 50
 batch_size = 128
-learning_rate = 0.001
-optimizer = sgd
+# Adam typically uses smaller learning rates than SGD
+learning_rate = 0.0005
+
+# Use Adam optimizer (options: sgd, adam)
+optimizer = adam
+
+# Adam hyperparameters (only used when optimizer = adam)
+adam_beta1 = 0.9        # Decay rate for 1st moment (usually 0.9)
+adam_beta2 = 0.999      # Decay rate for 2nd moment (usually 0.999)
+adam_epsilon = 1e-8     # Numerical stability constant
 
 [architecture]
 # Deeper network for image classification
