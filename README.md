@@ -49,20 +49,19 @@ make run CONFIG=examples/mnist_config.txt
 - **Multiple label formats**: Auto-detects or accepts integer indices, one-hot, raw floats
 - **Generic training**: Same binary works with any dataset—change config, not code
 - **Validated datasets**: Tested on Iris, Breast Cancer, MNIST, CIFAR-10
-- **Comprehensive metrics**: Per-class precision, recall, F1-score and overall accuracy
+- **metrics**: Per-class precision, recall, F1-score and overall accuracy
 - **Confusion matrix**: Visual representation of prediction accuracy per class
 - **Results export**: Evaluation results saved to timestamped files in table format
 
-## Improvements Over Original
+## Extensions
 
-This implementation significantly enhances [Magicalbat](https://github.com/Magicalbat)'s original framework:
+Based on [Magicalbat](https://github.com/Magicalbat)'s original framework, with the following additions:
 
 - **Generic Dataset Support**: Completely decoupled from MNIST-specific code. Train on any dataset—Iris, Breast Cancer, CIFAR-10, or custom data—without modifications
 - **Config-Driven Architecture**: Define your entire network in a text config file. Change architectures, hyperparameters, and datasets without recompiling the binary
 - **Flexible Label Formats**: Automatically detects and handles integer indices, one-hot encoded labels, or raw float values
 - **Multiple Optimizers**: Choose between SGD and Adam with full hyperparameter control, enabling better convergence for different problem types
-- **Comprehensive Metrics & Visualization**: Built-in per-class precision, recall, F1-score, confusion matrices, and timestamped results export
-- **Production-Ready**: No external dependencies—all matrix operations, backpropagation, and memory management implemented from scratch in pure C
+- **Metrics & Visualization**: Built-in per-class precision, recall, F1-score, confusion matrices, and timestamped results export
 
 ## Optimizers
 
