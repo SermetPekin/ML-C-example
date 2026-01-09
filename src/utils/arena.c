@@ -149,7 +149,10 @@ b32 plat_mem_decommit(void* ptr, u64 size) {
 }
 
 b32 plat_mem_release(void* ptr, u64 size) {
-    return VirtualFree(ptr, size, MEM_RELEASE);
+    // changed this part cause there was a bug in the original Arena
+     (void)size; 
+     return VirtualFree(ptr, 0, MEM_RELEASE);
+    
 }
 
 
