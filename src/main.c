@@ -180,7 +180,13 @@ int main(int argc, char** argv) {
 
     printf("Results saved to: %s\n", results_filename);
 
-    arena_destroy(perm_arena);
+   
+   if (!arena_destroy(perm_arena))
+    {
+        fprintf(stderr, "CRITICAL: Failed to destroy arena. Shutting down.\n");
+        abort();
+    }
+    
 
     return 0;
 }
