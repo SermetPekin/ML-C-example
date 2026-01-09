@@ -24,9 +24,25 @@ mem_arena* arena_create(u64 reserve_size, u64 commit_size) {
     return arena;
 }
 
-void arena_destroy(mem_arena* arena) {
+/* void arena_destroy(mem_arena* arena) {
     plat_mem_release(arena, arena->reserve_size);
 }
+*/ 
+ 
+bool arena_destroy(mem_arena* arena) {
+    if (arena == NULL) {
+        return true;  
+    }
+
+    if (!plat_mem_release(arena, arena->reserve_size)) {
+         
+        return false; 
+    }
+  
+    return true;
+}
+
+ 
 
 void* arena_push(mem_arena* arena, u64 size, b32 non_zero) {
     u64 pos_aligned = ALIGN_UP_POW2(arena->pos, ARENA_ALIGN);
@@ -149,10 +165,10 @@ b32 plat_mem_decommit(void* ptr, u64 size) {
 }
 
 b32 plat_mem_release(void* ptr, u64 size) {
-    // changed this part cause there was a bug in the original Arena
      (void)size; 
      return VirtualFree(ptr, 0, MEM_RELEASE);
-    
+
+     // return VirtualFree(ptr, size, MEM_RELEASE);
 }
 
 
