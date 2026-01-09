@@ -12,7 +12,8 @@ int main(void) {
         mem_arena* arena = arena_create(1024 * 1024, 64 * 1024);
         ASSERT_TRUE(arena != NULL);
         ASSERT_TRUE(arena->pos >= 0);
-        arena_destroy(arena);
+        
+       ASSERT_TRUE(arena_destroy(arena)) ; 
         TEST("Arena creation allocates memory");
     }
 
@@ -23,7 +24,9 @@ int main(void) {
         void* ptr = arena_push(arena, 100, false);
         ASSERT_TRUE(ptr != NULL);
         ASSERT_TRUE(arena->pos > initial_pos);
-        arena_destroy(arena);
+      //  arena_destroy(arena);
+        ASSERT_TRUE(arena_destroy(arena)) ; 
+
         TEST("Single allocation increases position");
     }
 
@@ -38,7 +41,9 @@ int main(void) {
         ASSERT_TRUE(ptr2 != NULL);
         ASSERT_TRUE(ptr3 != NULL);
         ASSERT_TRUE(arena->pos >= 450);  // Accounts for alignment overhead
-        arena_destroy(arena);
+        //arena_destroy(arena);
+        ASSERT_TRUE(arena_destroy(arena)) ; 
+
         TEST("Multiple allocations stack correctly");
     }
 
@@ -49,7 +54,8 @@ int main(void) {
         void* ptr2 = arena_push(arena, 100, false);
 
         ASSERT_TRUE((u64)ptr2 > (u64)ptr1);
-        arena_destroy(arena);
+     //   arena_destroy(arena);
+        ASSERT_TRUE(arena_destroy(arena)) ; 
         TEST("Allocations don't overlap");
     }
 
@@ -69,7 +75,9 @@ int main(void) {
             }
         }
         ASSERT_TRUE(all_correct);
-        arena_destroy(arena);
+        // arena_destroy(arena);
+        ASSERT_TRUE(arena_destroy(arena)) ; 
+
         TEST("Data persists correctly in allocated memory");
     }
 
@@ -83,7 +91,9 @@ int main(void) {
         arena_clear(arena);
         // Resets to ARENA_BASE_POS (sizeof metadata), not 0
         ASSERT_TRUE(arena->pos >= 0 && arena->pos <= 32);
-        arena_destroy(arena);
+        // arena_destroy(arena);
+        ASSERT_TRUE(arena_destroy(arena)) ; 
+
         TEST("Arena clear resets position");
     }
 
@@ -100,7 +110,9 @@ int main(void) {
         test_struct* s = PUSH_STRUCT(arena, test_struct);
         ASSERT_TRUE(s != NULL);
         TEST("PUSH_STRUCT macro allocates memory");
-        arena_destroy(arena);
+        //arena_destroy(arena);
+        ASSERT_TRUE(arena_destroy(arena)) ; 
+
     }
 
     // Test 8: PUSH_ARRAY macro
@@ -108,7 +120,9 @@ int main(void) {
         mem_arena* arena = arena_create(10 * 1024, 1024);
         int* arr = PUSH_ARRAY(arena, int, 10);
         ASSERT_TRUE(arr != NULL);
-        arena_destroy(arena);
+        //arena_destroy(arena);
+        ASSERT_TRUE(arena_destroy(arena)) ; 
+
         TEST("PUSH_ARRAY macro allocates memory");
     }
 
